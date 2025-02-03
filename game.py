@@ -170,7 +170,7 @@ class Table:
         return str(table_id)
 
     @staticmethod
-    def login(db: ManagerDB, table_id: str) -> "Table":
+    def get(db: ManagerDB, table_id: str) -> "Table":
         """current game user"""
         attr = db.select(Table.TABLE, ['*'], {User.TABLEKEY: table_id})[0]
         return Table(attr[0])
@@ -193,13 +193,21 @@ class Table:
         return self.table_id
 
 
-class User:
+class User2(Table):
+    TABLE = ""
+    TABLEKEY = ""
+    SCHEMA = ""
+
+
+
+class User(Table):
     """user table object"""
     TABLE = "users"
     TABLEKEY = "user_id"
     SCHEMA = "user_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name varchar(255) NOT NULL, mail varchar(255) NOT NULL"
 
     def __init__(self, user_id: str, name: str, mail: str) -> None:
+        super().__init__(user_id)
         self.user_id: str = user_id
         self.name: str = name
         self.mail: str = mail
@@ -216,7 +224,7 @@ class User:
         return str(user_id)
 
     @staticmethod
-    def login(db: ManagerDB, user_id: str) -> "User":
+    def get(db: ManagerDB, user_id: str) -> "User":
         """current game user"""
         attr = db.select(User.TABLE, ['*'], {User.TABLEKEY: user_id})[0]
         return User(attr[0], attr[1], attr[2])
@@ -243,13 +251,14 @@ class User:
         return f"{self.name} ({self.mail})"
 
 
-class Character:
+class Character(Table):
     """character table object"""
     TABLE = "characters"
     TABLEKEY = "character_id"
     SCHEMA = "character_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name varchar(255) NOT NULL, description varchar(255), location_id REFERENCES location(id), user_id REFERENCES users(id) NOT NULL"
 
     def __init__(self, character_id: str, name: str, description: str, location_id: str, user_id: str) -> None:
+        super().__init__(character_id)
         self.character_id = character_id
         self.name = name
         self.description = description
@@ -269,7 +278,7 @@ class Character:
         return str(character_id)
 
     @staticmethod
-    def login(db: ManagerDB, character_id: str, user_id: str) -> "Character":
+    def get(db: ManagerDB, character_id: str, user_id: str) -> "Character":
         """current user character"""
         attr = db.select(Character.TABLE, [
                          '*'], {Character.TABLEKEY: character_id, User.TABLEKEY: user_id})[0]
@@ -317,13 +326,14 @@ class Character:
         return f"{self.name} ({self.description})"
 
 
-class Location:
+class Location(Table):
     """location table object"""
     TABLE = "locations"
     TABLEKEY = "location_id"
     SCHEMA = "location_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name varchar(255) NOT NULL, description varchar(255)"
 
     def __init__(self, location_id: str, name: str, description: str) -> None:
+        super().__init__(location_id)
         self.location_id = location_id
         self.name = name
         self.description = description
@@ -356,7 +366,7 @@ class Location:
         return db.table_len(Location.TABLE)
 
     @staticmethod
-    def visit(db: ManagerDB, location_id: str = None) -> "Location":
+    def get(db: ManagerDB, location_id: str = None) -> "Location":
         """current character Location"""
         if location_id is None or location_id == "NULL":
             return Location(-1, "None", "Nowhere")
@@ -389,7 +399,7 @@ class Game:
 
     def set_user(self, user_id: str, db: ManagerDB, menu: Menu) -> None:
         """assign game user"""
-        self.user = User.login(db, user_id)
+        self.user = User.get(db, user_id)
         menu.close()
 
     def set_character_create(self, db: ManagerDB, menu: Menu) -> None:
@@ -401,7 +411,7 @@ class Game:
 
     def set_character(self, character_id: str, user_id: str, db: ManagerDB, menu: Menu) -> None:
         """assign game character"""
-        self.character = Character.login(db, character_id, user_id)
+        self.character = Character.get(db, character_id, user_id)
         menu.close()
 
     def set_location_create(self, db: ManagerDB, menu: Menu) -> None:
@@ -428,8 +438,7 @@ def console_menu(db, game):
     clear()
     mainloop = True
     while mainloop:
-        print(f"{''.join('=' for i in range(50))}\n{
-              ''.join(' ' for i in range(20))}ADVENTURE GAME \n")
+        print(f"{''.join('=' for i in range(50))}\n{''.join(' ' for i in range(20))}ADVENTURE GAME \n")
         print('\n'.join(User.list(db)))
 
         inp = input("select account (by id)\n> ")
@@ -439,7 +448,7 @@ def console_menu(db, game):
             mail = input("Account Mail\n> ")
             inp = User.create(db, name, mail)
             db.save()
-        game.user = User.login(db, inp)
+        game.user = User.get(db, inp)
 
         print('\n'.join(Character.list(db, game.user.user_id)))
         # print(db.select(Character.TABLE, ['*'], {User.TABLEKEY: game.user.user_id}))
@@ -451,15 +460,17 @@ def console_menu(db, game):
             description = input("Character Description\n> ")
             inp = Character.create(db, name, description, game.user.user_id)
             db.save()
-        game.character = Character.login(db, inp, game.user.user_id)
+        game.character = Character.get(db, inp, game.user.user_id)
 
         clear()
         gameloop = True
         while gameloop:
             print(f"AT {db.select(Location.TABLE, [
                   '*'], {Location.TABLEKEY: game.character.location_id})} AS {game.character}\n")
-            characters = db.select(Character.TABLE, [
-                                   '*'], {Location.TABLEKEY: game.character.location_id, f"NOT {Character.TABLEKEY}": game.character.character_id})
+            characters = db.select(
+                Character.TABLE, ['*'],
+                {Location.TABLEKEY: game.character.location_id, f"NOT {Character.TABLEKEY}": game.character.character_id}
+            )
             print(f"{'\n'.join(f'{character}' for character in characters)}\n")
             print('\n'.join(Location.list(db)))
 
@@ -495,11 +506,19 @@ def main():
     characters = [MenuOption(
         text="New Character", action=lambda: game.set_character_create(db, charactermenu))]
     for character in Character.list(db, game.user.user_id):
-        characters.append(MenuOption(text=character, action=lambda id=character.character_id: game.set_character(
-            id, game.user.user_id, db, charactermenu)))
+        characters.append(
+            MenuOption(
+                text=character,
+                action=lambda id=character.character_id: 
+                game.set_character(id, game.user.user_id, db, charactermenu)
+            )
+        )
 
-    charactermenu = Menu(MenuTitle("Adventure Game"),
-                         MenuItem("Select Character"), characters)
+    charactermenu = Menu(
+        MenuTitle("Adventure Game"),
+        MenuItem("Select Character"),
+        characters
+    )
     Menu.display_menu(charactermenu)
 
     gameloop = True
@@ -510,8 +529,7 @@ def main():
             locations.append(MenuOption(text=f"Go To: {location.display(
             )}", action=lambda id=location.location_id: game.set_location(id, db, locationmenu)))
 
-        text = f"Character: {game.character.display()}\nAT {Location.visit(
-            db, game.character.location_id).display() if game.character.location_id else "None"}\n\nSelect Action"
+        text = f"Character: {game.character.display()}\nAT {Location.get(db, game.character.location_id).display() if game.character.location_id else "None"}\n\nSelect Action"
         options = locations + \
             [MenuOption(text="Quit", action=lambda: game.exit())]
 
