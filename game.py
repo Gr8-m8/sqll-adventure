@@ -16,7 +16,7 @@ def log():
     # open(".log", "w")
 
 
-class ManagerDB():
+class ManagerDB:
     """db communication"""
 
     def __init__(self):
@@ -83,6 +83,74 @@ class ManagerDB():
         ret = self.select(table, ['count(*)'])
         return int(ret[0][0])
 
+
+class Sqllite3DB(ManagerDB):
+    """sqlite3 db communication"""
+
+    def __init__(self):
+        super().__init__()
+        self.db = sqlite3.connect('game.db')
+        self.cursor = self.db.cursor()
+        self.create_table(User.TABLE, User.SCHEMA)
+        self.create_table(Location.TABLE, Location.SCHEMA)
+        self.create_table(Character.TABLE, Character.SCHEMA)
+
+    def raw(self, cmd, debug=False):
+        """raw sql cmd"""
+        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+
+    def create_table(self, table: str, schema: str, debug: bool = False) -> list:
+        """table into db"""
+        cmd = f"CREATE TABLE IF NOT EXISTS {table} ({schema});"
+        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+
+    def save(self) -> None:
+        """save db"""
+        self.db.commit()
+
+    def insert(self, table: str, datav: list, debug: bool = False) -> list:
+        """data into db"""
+        data = ', '.join(datav)
+
+        cmd = f"INSERT INTO {table} VALUES ({data});"
+        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+
+    def update(self, table: str, datakv: list, identifierkv: dict, debug: bool = False) -> list:
+        """change data in db"""
+        data = ', '.join(f"{k}={v}" for k, v in datakv.items())
+        data.replace(':', '=')
+
+        identifier = ' AND '.join(f"{k}={v}" for k, v in identifierkv.items())
+        identifier.replace(':', '=')
+
+        cmd = f"UPDATE {table} SET {data} WHERE {(identifier)};"
+        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+
+    def select(self, table: str, datak: list, identifierkv: dict = None, debug: bool = False) -> list:
+        """get data in db"""
+        data = ', '.join(datak)
+        if identifierkv:
+            identifier = ' AND '.join(
+                f"{k}={v}" for k, v in identifierkv.items())
+            identifier.replace(':', '=')
+        else:
+            identifier = None
+
+        cmd = f"SELECT {data} FROM {table} WHERE {(identifier)}" if identifier else f"SELECT {data} FROM {table}"
+        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+
+    def delete(self, table: str, identifierkv: dict, debug: bool = False) -> list:
+        """remove data in db"""
+        identifier = ' AND '.join(f"{k}={v}" for k, v in identifierkv.items())
+        identifier.replace(':', '=')
+
+        cmd = f"DELETE FROM {table} WHERE identifier"
+        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+
+    def table_len(self, table: str) -> int:
+        """len of table in db"""
+        ret = self.select(table, ['count(*)'])
+        return int(ret[0][0])
 
 class Table:
     """Generic table object"""
@@ -410,7 +478,7 @@ def console_menu(db, game):
 
 def main():
     """main scrip execution"""
-    db: ManagerDB = ManagerDB()
+    db: ManagerDB = Sqllite3DB()
     game: Game = Game()
 
     # Menu.display_menu(Menu(MenuTitle("New User"),MenuItem(""), [MenuOption()])))]
