@@ -18,33 +18,30 @@ def log():
 
 class ManagerDB:
     """db communication"""
-
     def __init__(self):
-        self.db = sqlite3.connect('game.db')
-        self.cursor = self.db.cursor()
         self.create_table(User.TABLE, User.SCHEMA)
         self.create_table(Location.TABLE, Location.SCHEMA)
         self.create_table(Character.TABLE, Character.SCHEMA)
 
     def raw(self, cmd, debug=False):
         """raw sql cmd"""
-        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+        return cmd
 
     def create_table(self, table: str, schema: str, debug: bool = False) -> list:
         """table into db"""
         cmd = f"CREATE TABLE IF NOT EXISTS {table} ({schema});"
-        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+        return cmd
 
     def save(self) -> None:
         """save db"""
-        self.db.commit()
+        return None
 
     def insert(self, table: str, datav: list, debug: bool = False) -> list:
         """data into db"""
         data = ', '.join(datav)
 
         cmd = f"INSERT INTO {table} VALUES ({data});"
-        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+        return cmd
 
     def update(self, table: str, datakv: list, identifierkv: dict, debug: bool = False) -> list:
         """change data in db"""
@@ -55,7 +52,7 @@ class ManagerDB:
         identifier.replace(':', '=')
 
         cmd = f"UPDATE {table} SET {data} WHERE {(identifier)};"
-        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+        return cmd
 
     def select(self, table: str, datak: list, identifierkv: dict = None, debug: bool = False) -> list:
         """get data in db"""
@@ -68,7 +65,7 @@ class ManagerDB:
             identifier = None
 
         cmd = f"SELECT {data} FROM {table} WHERE {(identifier)}" if identifier else f"SELECT {data} FROM {table}"
-        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+        return cmd
 
     def delete(self, table: str, identifierkv: dict, debug: bool = False) -> list:
         """remove data in db"""
@@ -76,12 +73,12 @@ class ManagerDB:
         identifier.replace(':', '=')
 
         cmd = f"DELETE FROM {table} WHERE identifier"
-        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+        return cmd
 
     def table_len(self, table: str) -> int:
         """len of table in db"""
-        ret = self.select(table, ['count(*)'])
-        return int(ret[0][0])
+        #ret = self.select(table, ['count(*)'])
+        return 0
 
 
 class Sqllite3DB(ManagerDB):
@@ -106,7 +103,7 @@ class Sqllite3DB(ManagerDB):
 
     def save(self) -> None:
         """save db"""
-        self.db.commit()
+        return self.db.commit()
 
     def insert(self, table: str, datav: list, debug: bool = False) -> list:
         """data into db"""
