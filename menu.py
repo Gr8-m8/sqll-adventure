@@ -7,7 +7,8 @@ from textdecoration import textdecoration as textd
 
 def console_clear():
     """Clear Console"""
-    os.system('cls' if os.name == 'nt' else 'clear')
+    CLEAR = True
+    os.system('cls' if os.name == 'nt' else 'clear') if CLEAR else None
 
 
 CONSOLECLEAR = True
@@ -140,6 +141,7 @@ class Menu:
                 self.options[self.options_cursor].action('>>')
             except Exception as e:
                 print(e)
+
         if key in [b'\r', b' ']:
             try:
                 self.options[self.options_cursor].action()
