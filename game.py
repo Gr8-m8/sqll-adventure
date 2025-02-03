@@ -2,20 +2,23 @@
 import sqlite3
 import os
 
-from menu import Menu, MenuItem, MenuOption, MenuTitle 
+from menu import Menu, MenuItem, MenuOption, MenuTitle
 
 
-def clear():
+def clear(active=True):
     """Clear Console"""
-    CLEAR = True
-    os.system('cls' if os.name == 'nt' else 'clear') if CLEAR else None
+    if active:
+        os.system('cls' if os.name == 'nt' else 'clear')
+
 
 def log():
     """print to log file"""
-    open(".log", "w")
+    # open(".log", "w")
+
 
 class ManagerDB():
     """db communication"""
+
     def __init__(self):
         self.db = sqlite3.connect('game.db')
         self.cursor = self.db.cursor()
@@ -23,7 +26,7 @@ class ManagerDB():
         self.create_table(Location.TABLE, Location.SCHEMA)
         self.create_table(Character.TABLE, Character.SCHEMA)
 
-    def raw(self, cmd, debug = False):
+    def raw(self, cmd, debug=False):
         """raw sql cmd"""
         return self.cursor.execute(cmd).fetchall() if not debug else cmd
 
@@ -45,10 +48,10 @@ class ManagerDB():
 
     def update(self, table: str, datakv: list, identifierkv: dict, debug: bool = False) -> list:
         """change data in db"""
-        data = ', '.join(f"{k}={v}" for k,v in datakv.items())
+        data = ', '.join(f"{k}={v}" for k, v in datakv.items())
         data.replace(':', '=')
 
-        identifier = ' AND '.join(f"{k}={v}" for k,v in identifierkv.items())
+        identifier = ' AND '.join(f"{k}={v}" for k, v in identifierkv.items())
         identifier.replace(':', '=')
 
         cmd = f"UPDATE {table} SET {data} WHERE {(identifier)};"
@@ -58,7 +61,8 @@ class ManagerDB():
         """get data in db"""
         data = ', '.join(datak)
         if identifierkv:
-            identifier = ' AND '.join(f"{k}={v}" for k,v in identifierkv.items())
+            identifier = ' AND '.join(
+                f"{k}={v}" for k, v in identifierkv.items())
             identifier.replace(':', '=')
         else:
             identifier = None
@@ -68,8 +72,8 @@ class ManagerDB():
 
     def delete(self, table: str, identifierkv: dict, debug: bool = False) -> list:
         """remove data in db"""
-        identifier = ' AND '.join(f"{k}={v}" for k,v in identifierkv.items())
-        identifier.replace(':','=')
+        identifier = ' AND '.join(f"{k}={v}" for k, v in identifierkv.items())
+        identifier.replace(':', '=')
 
         cmd = f"DELETE FROM {table} WHERE identifier"
         return self.cursor.execute(cmd).fetchall() if not debug else cmd
@@ -79,11 +83,13 @@ class ManagerDB():
         ret = self.select(table, ['count(*)'])
         return int(ret[0][0])
 
+
 class Table:
     """Generic table object"""
     TABLE = "template"
     TABLEKEY = "template_id"
     SCHEMA = "template_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT"
+
     def __init__(self, table_id: str) -> None:
         self.table_id = table_id
 
@@ -113,16 +119,18 @@ class Table:
     def len(db: ManagerDB) -> int:
         """len user table entries"""
         return db.table_len(Table.TABLE)
-    
+
     def id(self):
         """get id"""
         return self.table_id
+
 
 class User:
     """user table object"""
     TABLE = "users"
     TABLEKEY = "user_id"
     SCHEMA = "user_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name varchar(255) NOT NULL, mail varchar(255) NOT NULL"
+
     def __init__(self, user_id: str, name: str, mail: str) -> None:
         self.user_id: str = user_id
         self.name: str = name
@@ -157,16 +165,22 @@ class User:
     def len(db: ManagerDB) -> int:
         """len user table entries"""
         return db.table_len(User.TABLE)
-    
-    def id(self):
+
+    def id(self) -> str:
         """get id"""
         return self.user_id
+
+    def display(self) -> str:
+        """display str"""
+        return f"{self.name} ({self.mail})"
+
 
 class Character:
     """character table object"""
     TABLE = "characters"
     TABLEKEY = "character_id"
     SCHEMA = "character_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name varchar(255) NOT NULL, description varchar(255), location_id REFERENCES location(id), user_id REFERENCES users(id) NOT NULL"
+
     def __init__(self, character_id: str, name: str, description: str, location_id: str, user_id: str) -> None:
         self.character_id = character_id
         self.name = name
@@ -181,23 +195,36 @@ class Character:
     def create(db: ManagerDB, name: str, description: str, user_id: str, location_id: str = '"NULL"') -> str:
         """new character table row"""
         character_id = Character.len(db)+1
-        db.insert(Character.TABLE, [str(character_id), '"'+name+'"', '"'+description+'"', str(location_id), str(user_id)])
+        db.insert(Character.TABLE, [str(
+            character_id), '"'+name+'"', '"'+description+'"', str(location_id), str(user_id)])
         db.save()
         return str(character_id)
 
     @staticmethod
     def login(db: ManagerDB, character_id: str, user_id: str) -> "Character":
         """current user character"""
-        attr = db.select(Character.TABLE, ['*'], {Character.TABLEKEY: character_id, User.TABLEKEY: user_id})[0]
-        return Character(attr[0],attr[1],attr[2],attr[3] if attr[3] else "NULL",attr[4])
+        attr = db.select(Character.TABLE, [
+                         '*'], {Character.TABLEKEY: character_id, User.TABLEKEY: user_id})[0]
+        return Character(attr[0], attr[1], attr[2], attr[3] if attr[3] else "NULL", attr[4])
 
     @staticmethod
     def list(db: ManagerDB, user_id: str = None) -> list:
         """character table entries"""
         ret = []
-        query = db.select(Character.TABLE, ['*']) if not user_id else db.select(Character.TABLE, ['*'], {User.TABLEKEY: user_id})
-        for character in query: 
-            ret.append(Character(character_id=character[0], name=character[1], description=character[2], location_id=character[3], user_id=character[4]))
+        query = db.select(
+            Character.TABLE, ['*']) if not user_id else db.select(Character.TABLE, ['*'],
+                                                                  {User.TABLEKEY: user_id}
+                                                                  )
+        for character in query:
+            ret.append(
+                Character(
+                    character_id=character[0],
+                    name=character[1],
+                    description=character[2],
+                    location_id=character[3],
+                    user_id=character[4]
+                )
+            )
         return ret
 
     @staticmethod
@@ -207,11 +234,19 @@ class Character:
 
     def move(self, db: ManagerDB, location_id: str) -> list:
         """change character location"""
-        return db.update(Character.TABLE, {Location.TABLEKEY: location_id}, {Character.TABLEKEY: self.character_id})
+        return db.update(
+            Character.TABLE,
+            {Location.TABLEKEY: location_id},
+            {Character.TABLEKEY: self.character_id}
+        )
 
-    def id(self):
+    def id(self) -> str:
         """get id"""
         return self.character_id
+
+    def display(self) -> str:
+        """display str"""
+        return f"{self.name} ({self.description})"
 
 
 class Location:
@@ -219,6 +254,7 @@ class Location:
     TABLE = "locations"
     TABLEKEY = "location_id"
     SCHEMA = "location_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name varchar(255) NOT NULL, description varchar(255)"
+
     def __init__(self, location_id: str, name: str, description: str) -> None:
         self.location_id = location_id
         self.name = name
@@ -231,7 +267,8 @@ class Location:
     def create(db: ManagerDB, name: str, description: str) -> str:
         """new location table row"""
         location_id = Location.len(db)+1
-        db.insert(Location.TABLE, [str(location_id), '"'+name+'"', '"'+description+'"'])
+        db.insert(Location.TABLE, [str(location_id),
+                  '"'+name+'"', '"'+description+'"'])
         db.save()
         return str(location_id)
 
@@ -239,7 +276,8 @@ class Location:
     def list(db: ManagerDB, location_id_exclude: str = None) -> list:
         """location table entries"""
         ret = []
-        query = db.select(Location.TABLE, ['*']) if not location_id_exclude else db.select(Location.TABLE, ['*'], {f"NOT {Location.TABLEKEY}": location_id_exclude})
+        query = db.select(Location.TABLE, ['*']) if not location_id_exclude else db.select(
+            Location.TABLE, ['*'], {f"NOT {Location.TABLEKEY}": location_id_exclude})
         for location in query:
             ret.append(Location(location[0], location[1], location[2]))
         return ret
@@ -248,29 +286,32 @@ class Location:
     def len(db: ManagerDB) -> int:
         """len location table entries"""
         return db.table_len(Location.TABLE)
-    
+
     @staticmethod
-    def visit(db: ManagerDB, location_id: str) -> "Location":
+    def visit(db: ManagerDB, location_id: str = None) -> "Location":
         """current character Location"""
-        attr = db.select(Location.TABLE, ['*'], {Location.TABLEKEY: location_id})[0]
-        return Location(attr[0],attr[1],attr[2])
-    
-    def id(self):
+        if location_id is None or location_id == "NULL":
+            return Location(-1, "None", "Nowhere")
+
+        attr = db.select(Location.TABLE, ['*'],
+                         {Location.TABLEKEY: location_id})[0]
+        return Location(attr[0], attr[1], attr[2])
+
+    def id(self) -> str:
         """get id"""
         return self.location_id
+
+    def display(self) -> str:
+        """display str"""
+        return f"{self.name} ({self.description})"
 
 
 class Game:
     """local game"""
+
     def __init__(self):
         self.user: User = None
         self.character: Character = None
-
-    def set_create(self):
-        pass
-    
-    def set(self):
-        pass
 
     def set_user_create(self, db: ManagerDB, menu: Menu) -> None:
         """create and assign game user"""
@@ -287,7 +328,8 @@ class Game:
         """create and assign game character"""
         name = input("Character Name\n> ")
         description = input("Character Description\n> ")
-        self.set_character(Character.create(db, name, description, self.user.user_id), self.user.user_id, db, menu)
+        self.set_character(Character.create(
+            db, name, description, self.user.user_id), self.user.user_id, db, menu)
 
     def set_character(self, character_id: str, user_id: str, db: ManagerDB, menu: Menu) -> None:
         """assign game character"""
@@ -312,12 +354,14 @@ class Game:
         clear()
         exit(0)
 
+
 def console_menu(db, game):
     """Console Menu Interface"""
     clear()
     mainloop = True
-    while (mainloop):
-        print(f"{''.join('=' for i in range(50))}\n{''.join(' ' for i in range(20))}ADVENTURE GAME \n")
+    while mainloop:
+        print(f"{''.join('=' for i in range(50))}\n{
+              ''.join(' ' for i in range(20))}ADVENTURE GAME \n")
         print('\n'.join(User.list(db)))
 
         inp = input("select account (by id)\n> ")
@@ -330,7 +374,7 @@ def console_menu(db, game):
         game.user = User.login(db, inp)
 
         print('\n'.join(Character.list(db, game.user.user_id)))
-        #print(db.select(Character.TABLE, ['*'], {User.TABLEKEY: game.user.user_id}))
+        # print(db.select(Character.TABLE, ['*'], {User.TABLEKEY: game.user.user_id}))
 
         inp = input("select character (by id)\n> ")
         if not inp.isdigit() or int(inp) < 1 or int(inp) > db.table_len(Character.TABLE):
@@ -340,13 +384,14 @@ def console_menu(db, game):
             inp = Character.create(db, name, description, game.user.user_id)
             db.save()
         game.character = Character.login(db, inp, game.user.user_id)
-            
 
         clear()
         gameloop = True
-        while (gameloop):
-            print(f"AT {db.select(Location.TABLE, ['*'], {Location.TABLEKEY: game.character.location_id})} AS {game.character}\n")
-            characters = db.select(Character.TABLE, ['*'], {Location.TABLEKEY: game.character.location_id, f"NOT {Character.TABLEKEY}":game.character.character_id})
+        while gameloop:
+            print(f"AT {db.select(Location.TABLE, [
+                  '*'], {Location.TABLEKEY: game.character.location_id})} AS {game.character}\n")
+            characters = db.select(Character.TABLE, [
+                                   '*'], {Location.TABLEKEY: game.character.location_id, f"NOT {Character.TABLEKEY}": game.character.character_id})
             print(f"{'\n'.join(f'{character}' for character in characters)}\n")
             print('\n'.join(Location.list(db)))
 
@@ -362,36 +407,48 @@ def console_menu(db, game):
 
             clear()
 
+
 def main():
     """main scrip execution"""
     db: ManagerDB = ManagerDB()
     game: Game = Game()
 
-    users = [MenuOption(text="New User", action=lambda: game.set_user_create(db, usermenu))] #Menu.display_menu(Menu(MenuTitle("New User"),MenuItem(""), [MenuOption()])))]
+    # Menu.display_menu(Menu(MenuTitle("New User"),MenuItem(""), [MenuOption()])))]
+    users = [MenuOption(
+        text="New User", action=lambda: game.set_user_create(db, usermenu))]
     for user in User.list(db):
-        users.append(MenuOption(text=user, action=lambda id=user.user_id: game.set_user(id, db, usermenu)))
-    
-    usermenu = Menu(MenuTitle("Adventure Game"),MenuItem("Select User"), users)
+        users.append(MenuOption(
+            text=user, action=lambda id=user.user_id: game.set_user(id, db, usermenu)))
+
+    usermenu = Menu(MenuTitle("Adventure Game"),
+                    MenuItem("Select User"), users)
     Menu.display_menu(usermenu)
 
-
-    characters = [MenuOption(text="New Character", action=lambda: game.set_character_create(db, charactermenu))]
+    characters = [MenuOption(
+        text="New Character", action=lambda: game.set_character_create(db, charactermenu))]
     for character in Character.list(db, game.user.user_id):
-        characters.append(MenuOption(text=character, action=lambda id=character.character_id: game.set_character(id, game.user.user_id, db, charactermenu)))
+        characters.append(MenuOption(text=character, action=lambda id=character.character_id: game.set_character(
+            id, game.user.user_id, db, charactermenu)))
 
-    charactermenu = Menu(MenuTitle("Adventure Game"),MenuItem("Select Character"), characters)
+    charactermenu = Menu(MenuTitle("Adventure Game"),
+                         MenuItem("Select Character"), characters)
     Menu.display_menu(charactermenu)
 
     gameloop = True
     while gameloop and game.user and game.character:
-        locations = [MenuOption(text="New Location", action=lambda: game.set_location_create(db, locationmenu))]
+        locations = [MenuOption(
+            text="New Location", action=lambda: game.set_location_create(db, locationmenu))]
         for location in Location.list(db):
-            locations.append(MenuOption(text=f"Go To: {location}", action=lambda id=location.location_id: game.set_location(id, db, locationmenu)))
+            locations.append(MenuOption(text=f"Go To: {location.display(
+            )}", action=lambda id=location.location_id: game.set_location(id, db, locationmenu)))
 
-        text = f"{game.character}\nAT{db.select(Location.TABLE, ['*'], {Location.TABLEKEY: game.character.location_id if game.character else "NULL" })}\n\nSelect Action"
-        options = locations+[MenuOption(text="Quit",action=lambda: game.exit())]
-    
-        locationmenu = Menu(MenuTitle("Adventure Game"),MenuItem(text), options)
+        text = f"Character: {game.character.display()}\nAT {Location.visit(
+            db, game.character.location_id).display() if game.character.location_id else "None"}\n\nSelect Action"
+        options = locations + \
+            [MenuOption(text="Quit", action=lambda: game.exit())]
+
+        locationmenu = Menu(MenuTitle("Adventure Game"),
+                            MenuItem(text), options)
         Menu.display_menu(locationmenu)
         locationmenu.close()
 
