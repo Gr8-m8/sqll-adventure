@@ -1,9 +1,45 @@
-"""sqllite3 import"""
+"""db game"""
 import sqlite3
+import mariadb
 import os
 
 from menu import Menu, MenuItem, MenuOption, MenuTitle
 
+
+class EnvManager:
+    """manage env var"""
+    def __init__(self):
+        self.load()
+
+    def load(self):
+        """import env var"""
+        try:
+            with open('.env', 'r', encoding='utf-8') as envfile:
+                for line in envfile:
+                    if '=' in line:
+                        #print(line.split('=')[0], "=", line.split('=')[1])
+                        os.environ[line.split('=')[0]] = line.split('=')[1].replace('"','').strip()
+        except FileNotFoundError:
+            open('.env', 'x')
+        except Exception as e:
+            exit(1)
+
+    def get(self, key:str) -> str:
+        """set none var & read env var"""
+        if not key in os.environ:
+            os.environ[key] = input(f"Set {key}").replace('"','').strip()
+        return os.environ[key]
+
+
+def set_env():
+    """import env var"""
+    with open('.env', 'r', encoding='utf-8') as envfile:
+        for line in envfile:
+            if '=' in line:
+                #print(line.split('=')[0], "=", line.split('=')[1])
+                os.environ[line.split('=')[0]] = line.split('=')[1].replace('"','').strip()
+
+set_env()
 
 def clear(active=True):
     """Clear Console"""
@@ -18,16 +54,20 @@ def log():
 
 class ManagerDB:
     """db communication"""
-    def __init__(self):
+    def __init__(self, env: EnvManager):
         self.create_table(User.TABLE, User.SCHEMA)
         self.create_table(Location.TABLE, Location.SCHEMA)
         self.create_table(Character.TABLE, Character.SCHEMA)
 
-    def raw(self, cmd, debug=False):
+    def close(self):
+        """close db connection"""
+        return None
+
+    def raw(self, cmd, debug=False) -> str:
         """raw sql cmd"""
         return cmd
 
-    def create_table(self, table: str, schema: str, debug: bool = False) -> list:
+    def create_table(self, table: str, schema: str, debug: bool = False) -> str:
         """table into db"""
         cmd = f"CREATE TABLE IF NOT EXISTS {table} ({schema});"
         return cmd
@@ -36,14 +76,14 @@ class ManagerDB:
         """save db"""
         return None
 
-    def insert(self, table: str, datav: list, debug: bool = False) -> list:
+    def insert(self, table: str, datav: list, debug: bool = False) -> str:
         """data into db"""
         data = ', '.join(datav)
 
         cmd = f"INSERT INTO {table} VALUES ({data});"
         return cmd
 
-    def update(self, table: str, datakv: list, identifierkv: dict, debug: bool = False) -> list:
+    def update(self, table: str, datakv: list, identifierkv: dict, debug: bool = False) -> str:
         """change data in db"""
         data = ', '.join(f"{k}={v}" for k, v in datakv.items())
         data.replace(':', '=')
@@ -54,7 +94,7 @@ class ManagerDB:
         cmd = f"UPDATE {table} SET {data} WHERE {(identifier)};"
         return cmd
 
-    def select(self, table: str, datak: list, identifierkv: dict = None, debug: bool = False) -> list:
+    def select(self, table: str, datak: list, identifierkv: dict = None, debug: bool = False) -> str:
         """get data in db"""
         data = ', '.join(datak)
         if identifierkv:
@@ -67,7 +107,7 @@ class ManagerDB:
         cmd = f"SELECT {data} FROM {table} WHERE {(identifier)}" if identifier else f"SELECT {data} FROM {table}"
         return cmd
 
-    def delete(self, table: str, identifierkv: dict, debug: bool = False) -> list:
+    def delete(self, table: str, identifierkv: dict, debug: bool = False) -> str:
         """remove data in db"""
         identifier = ' AND '.join(f"{k}={v}" for k, v in identifierkv.items())
         identifier.replace(':', '=')
@@ -80,20 +120,34 @@ class ManagerDB:
         #ret = self.select(table, ['count(*)'])
         return 0
 
+class MariaDB(ManagerDB):
+    """Mariadb db communication"""
 
-class Sqllite3DB(ManagerDB):
-    """sqlite3 db communication"""
+    def __init__(self, env: EnvManager):
+        self.db = None
+        self.cursor = None
+        try:
+            self.db = mariadb.connect(
+                user=env.get('DB_USER'),
+                password=env.get('DB_USER_PWD'),
+                host=env.get('IP'),
+                port=int(env.get('PORT')),
+                database=env.get('DB')
+            )
+            self.cursor = self.db.cursor()
+            self.db.autocommit = False
+            super().__init__(env)
+        except Exception as e:
+            print(e)
+            exit(1)
 
-    def __init__(self):
-        super().__init__()
-        self.db = sqlite3.connect('game.db')
-        self.cursor = self.db.cursor()
-        self.create_table(User.TABLE, User.SCHEMA)
-        self.create_table(Location.TABLE, Location.SCHEMA)
-        self.create_table(Character.TABLE, Character.SCHEMA)
+    def close(self):
+        self.db.close()
+        return super().close()
 
     def raw(self, cmd, debug=False):
         """raw sql cmd"""
+        cmd = super().raw(cmd)
         return self.cursor.execute(cmd).fetchall() if not debug else cmd
 
     def create_table(self, table: str, schema: str, debug: bool = False) -> list:
@@ -107,41 +161,72 @@ class Sqllite3DB(ManagerDB):
 
     def insert(self, table: str, datav: list, debug: bool = False) -> list:
         """data into db"""
-        data = ', '.join(datav)
-
-        cmd = f"INSERT INTO {table} VALUES ({data});"
+        cmd = super().insert(table, datav, debug)
         return self.cursor.execute(cmd).fetchall() if not debug else cmd
 
     def update(self, table: str, datakv: list, identifierkv: dict, debug: bool = False) -> list:
         """change data in db"""
-        data = ', '.join(f"{k}={v}" for k, v in datakv.items())
-        data.replace(':', '=')
-
-        identifier = ' AND '.join(f"{k}={v}" for k, v in identifierkv.items())
-        identifier.replace(':', '=')
-
-        cmd = f"UPDATE {table} SET {data} WHERE {(identifier)};"
+        cmd = super().update(table, datakv, identifierkv, debug)
         return self.cursor.execute(cmd).fetchall() if not debug else cmd
 
     def select(self, table: str, datak: list, identifierkv: dict = None, debug: bool = False) -> list:
         """get data in db"""
-        data = ', '.join(datak)
-        if identifierkv:
-            identifier = ' AND '.join(
-                f"{k}={v}" for k, v in identifierkv.items())
-            identifier.replace(':', '=')
-        else:
-            identifier = None
-
-        cmd = f"SELECT {data} FROM {table} WHERE {(identifier)}" if identifier else f"SELECT {data} FROM {table}"
+        cmd = super().select(table, datak, identifierkv, debug)
         return self.cursor.execute(cmd).fetchall() if not debug else cmd
 
     def delete(self, table: str, identifierkv: dict, debug: bool = False) -> list:
         """remove data in db"""
-        identifier = ' AND '.join(f"{k}={v}" for k, v in identifierkv.items())
-        identifier.replace(':', '=')
+        cmd = super().delete(table, identifierkv, debug)
+        return self.cursor.execute(cmd).fetchall() if not debug else cmd
 
-        cmd = f"DELETE FROM {table} WHERE identifier"
+    def table_len(self, table: str) -> int:
+        """len of table in db"""
+        ret = self.select(table, ['count(*)'])
+        return int(ret[0][0])
+
+class Sqllite3DB(ManagerDB):
+    """sqlite3 db communication"""
+
+    def __init__(self, env: EnvManager):
+        self.db = sqlite3.connect(env.get('DB'))
+        self.cursor = self.db.cursor()
+        super().__init__(env)
+
+    def close(self):
+        return super().close()
+
+    def raw(self, cmd, debug=False):
+        """raw sql cmd"""
+        cmd = super().raw(cmd)
+        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+
+    def create_table(self, table: str, schema: str, debug: bool = False) -> list:
+        """table into db"""
+        cmd = f"CREATE TABLE IF NOT EXISTS {table} ({schema});"
+        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+
+    def save(self) -> None:
+        """save db"""
+        return self.db.commit()
+
+    def insert(self, table: str, datav: list, debug: bool = False) -> list:
+        """data into db"""
+        cmd = super().insert(table, datav, debug)
+        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+
+    def update(self, table: str, datakv: list, identifierkv: dict, debug: bool = False) -> list:
+        """change data in db"""
+        cmd = super().update(table, datakv, identifierkv, debug)
+        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+
+    def select(self, table: str, datak: list, identifierkv: dict = None, debug: bool = False) -> list:
+        """get data in db"""
+        cmd = super().select(table, datak, identifierkv, debug)
+        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+
+    def delete(self, table: str, identifierkv: dict, debug: bool = False) -> list:
+        """remove data in db"""
+        cmd = super().delete(table, identifierkv, debug)
         return self.cursor.execute(cmd).fetchall() if not debug else cmd
 
     def table_len(self, table: str) -> int:
@@ -188,14 +273,6 @@ class Table:
     def id(self):
         """get id"""
         return self.table_id
-
-
-class User2(Table):
-    TABLE = ""
-    TABLEKEY = ""
-    SCHEMA = ""
-
-
 
 class User(Table):
     """user table object"""
@@ -247,7 +324,6 @@ class User(Table):
         """display str"""
         return f"{self.name} ({self.mail})"
 
-
 class Character(Table):
     """character table object"""
     TABLE = "characters"
@@ -286,9 +362,7 @@ class Character(Table):
         """character table entries"""
         ret = []
         query = db.select(
-            Character.TABLE, ['*']) if not user_id else db.select(Character.TABLE, ['*'],
-                                                                  {User.TABLEKEY: user_id}
-                                                                  )
+            Character.TABLE, ['*']) if not user_id else db.select(Character.TABLE, ['*'],{User.TABLEKEY: user_id})
         for character in query:
             ret.append(
                 Character(
@@ -424,71 +498,14 @@ class Game:
         menu.close()
         db.save()
 
-    def exit(self) -> None:
+    def exit(self, db: ManagerDB) -> None:
         """Terminate Game"""
+        db.close()
         clear()
         exit(0)
 
-
-def console_menu(db, game):
-    """Console Menu Interface"""
-    clear()
-    mainloop = True
-    while mainloop:
-        print(f"{''.join('=' for i in range(50))}\n{''.join(' ' for i in range(20))}ADVENTURE GAME \n")
-        print('\n'.join(User.list(db)))
-
-        inp = input("select account (by id)\n> ")
-        if not inp.isdigit() or int(inp) < 1 or int(inp) > db.table_len(User.TABLE):
-            print("Create Account")
-            name = input("Account Name\n> ")
-            mail = input("Account Mail\n> ")
-            inp = User.create(db, name, mail)
-            db.save()
-        game.user = User.get(db, inp)
-
-        print('\n'.join(Character.list(db, game.user.user_id)))
-        # print(db.select(Character.TABLE, ['*'], {User.TABLEKEY: game.user.user_id}))
-
-        inp = input("select character (by id)\n> ")
-        if not inp.isdigit() or int(inp) < 1 or int(inp) > db.table_len(Character.TABLE):
-            print("Create Character")
-            name = input("Character Name\n> ")
-            description = input("Character Description\n> ")
-            inp = Character.create(db, name, description, game.user.user_id)
-            db.save()
-        game.character = Character.get(db, inp, game.user.user_id)
-
-        clear()
-        gameloop = True
-        while gameloop:
-            print(f"AT {db.select(Location.TABLE, [
-                  '*'], {Location.TABLEKEY: game.character.location_id})} AS {game.character}\n")
-            characters = db.select(
-                Character.TABLE, ['*'],
-                {Location.TABLEKEY: game.character.location_id, f"NOT {Character.TABLEKEY}": game.character.character_id}
-            )
-            print(f"{'\n'.join(f'{character}' for character in characters)}\n")
-            print('\n'.join(Location.list(db)))
-
-            inp = input("select location (by id)\n> ")
-            if not inp.isdigit() or int(inp) < 1 or int(inp) > db.table_len(Location.TABLE):
-                print("Create Location")
-                name = input("Location Name\n> ")
-                description = input("Location Description\n> ")
-                inp = Location.create(db, name, description)
-            game.character.move(db, inp)
-            game.character.location_id = inp
-            db.save()
-
-            clear()
-
-
-def main():
-    """main scrip execution"""
-    db: ManagerDB = Sqllite3DB()
-    game: Game = Game()
-
+def main_game(game: Game, db: ManagerDB):
+    """main game func"""
     # Menu.display_menu(Menu(MenuTitle("New User"),MenuItem(""), [MenuOption()])))]
     users = [MenuOption(
         text="New User", action=lambda: game.set_user_create(db, usermenu))]
@@ -528,12 +545,24 @@ def main():
 
         text = f"Character: {game.character.display()}\nAT {Location.get(db, game.character.location_id).display() if game.character.location_id else "None"}\n\nSelect Action"
         options = locations + \
-            [MenuOption(text="Quit", action=lambda: game.exit())]
+            [MenuOption(text="Quit", action=lambda: game.exit(db))]
 
         locationmenu = Menu(MenuTitle("Adventure Game"),
                             MenuItem(text), options)
         Menu.display_menu(locationmenu)
         locationmenu.close()
+
+def main():
+    """main scrip execution"""
+    #connect = input("Connect Server:Port")
+
+    env: EnvManager = EnvManager()
+    db: ManagerDB = MariaDB(env)
+    game: Game = Game()
+
+    main_game(game, db)
+
+    
 
 
 main()
