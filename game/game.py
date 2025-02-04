@@ -30,17 +30,6 @@ class EnvManager:
             os.environ[key] = input(f"Set {key}").replace('"','').strip()
         return os.environ[key]
 
-
-def set_env():
-    """import env var"""
-    with open('.env', 'r', encoding='utf-8') as envfile:
-        for line in envfile:
-            if '=' in line:
-                #print(line.split('=')[0], "=", line.split('=')[1])
-                os.environ[line.split('=')[0]] = line.split('=')[1].replace('"','').strip()
-
-set_env()
-
 def clear(active=True):
     """Clear Console"""
     if active:
