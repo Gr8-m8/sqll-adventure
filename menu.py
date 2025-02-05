@@ -7,7 +7,7 @@ class Keyboard:
         return False
     
     def readkey(self):
-        return ""
+        return b''
 
 keyboardv = Keyboard()
 
@@ -173,7 +173,7 @@ class Menu:
                 waitforkey = False
                 time.sleep(0.025)
 
-        # self.setfeedback(key)
+        self.setfeedback(key)
         if key in [b'H', b'w']:
             self.options_cursor = (self.options_cursor-1) % len(self.options)
 

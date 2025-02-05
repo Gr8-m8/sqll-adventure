@@ -3,17 +3,17 @@ services:
     image: mariadb:11
     container_name: mariadb
     environment:
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
-      MARIADB_DATABASE: ${DB}
-      MARIADB_USER: ${DB_USER}
-      MARIADB_PASSWORD: ${DB_USER_PWD}
+      MARIADB_ROOT_PASSWORD: ${SERVER_HOST_PASSWORD}
+      MARIADB_DATABASE: ${DB_FILE}
+      MARIADB_USER: ${DB_GAME_USER}
+      MARIADB_PASSWORD: ${DB_GAME_USER_PWD}
     volumes:
     #  - mariadb_volume:./game:/game
       - ./game:/game:ro
     networks:
       - mariadb_network
     ports:
-     - "${PORT}:3306"
+     - "${DB_PORT}:3306"
 
 volumes:
   mariadb_volume:

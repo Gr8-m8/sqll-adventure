@@ -27,9 +27,9 @@ class EnvManager:
     def get(self, key:str) -> str:
         """set none var & read env var"""
         if not key in os.environ:
-            os.environ[key] = input(f"Set {key}").replace('"','').strip()
+            os.environ[key] = input(f"Set: {key}=").replace('"','').strip()
             with open('.env', 'a') as envfile:
-                envfile.write(f'{key}="{os.environ[key]}"')
+                envfile.write(f'{key}="{os.environ[key]}"\n')
         return os.environ[key]
 
 def clear(active=True):
