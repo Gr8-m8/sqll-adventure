@@ -394,7 +394,7 @@ class Character(Table):
         where.update({Location.TABLEKEY: location_id}) if location_id else None
         where.update({f"NOT {Character.TABLEKEY}": character_id}) if location_id else None
 
-        user_characters = db.select(Character.TABLE, ['*']) if not (user_id and location_id and character_id) else db.select(Character.TABLE, ['*'], where)
+        user_characters = db.select(Character.TABLE, ['*']) if not (user_id or location_id or character_id) else db.select(Character.TABLE, ['*'], where)
         if (user_characters):
             for character in user_characters:
                 ret.append(
@@ -572,9 +572,8 @@ def main_game(game: Game, db: ManagerDB):
                     MenuItem("Select User"), users)
     Menu.display_menu(usermenu)
 
-    characters = [MenuOption(
-        text="New Character", action=lambda: game.set_character_create(db, charactermenu))]
-    for character in Character.list(db, game.user.user_id):
+    characters = [MenuOption(text="New Character", action=lambda: game.set_character_create(db, charactermenu))]
+    for character in Character.list(db, user_id=game.user.user_id):
         characters.append(
             MenuOption(
                 text=character,
