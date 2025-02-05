@@ -28,6 +28,8 @@ class EnvManager:
         """set none var & read env var"""
         if not key in os.environ:
             os.environ[key] = input(f"Set {key}").replace('"','').strip()
+            with open('.env', 'a') as envfile:
+                envfile.write(f'{key}="{os.environ[key]}"')
         return os.environ[key]
 
 def clear(active=True):
@@ -106,8 +108,11 @@ class ManagerDB:
 
     def table_len(self, table: str) -> int:
         """len of table in db"""
-        #ret = self.select(table, ['count(*)'])
-        return 0
+        ret = 0
+        get = self.select(table, ['count(*)'])
+        if get:
+            ret = get
+        return get if get else ret
 
 class MariaDB(ManagerDB):
     """Mariadb db communication"""
@@ -126,8 +131,8 @@ class MariaDB(ManagerDB):
             self.cursor = self.db.cursor()
             self.db.autocommit = False
             super().__init__(env)
-        except Exception as e:
-            print(e)
+        except mariadb.Error as e:
+            print("MARIADB ERROR:", e)
             exit(1)
 
     def close(self):
@@ -137,12 +142,20 @@ class MariaDB(ManagerDB):
     def raw(self, cmd, debug=False):
         """raw sql cmd"""
         cmd = super().raw(cmd)
-        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+        val = self.cursor.execute(cmd) if not debug else cmd
+        try:
+            return self.cursor.fetchall()
+        except:
+            return []
 
     def create_table(self, table: str, schema: str, debug: bool = False) -> list:
         """table into db"""
         cmd = f"CREATE TABLE IF NOT EXISTS {table} ({schema});"
-        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+        val = self.cursor.execute(cmd) if not debug else cmd
+        try:
+            return self.cursor.fetchall()
+        except:
+            return []
 
     def save(self) -> None:
         """save db"""
@@ -151,27 +164,44 @@ class MariaDB(ManagerDB):
     def insert(self, table: str, datav: list, debug: bool = False) -> list:
         """data into db"""
         cmd = super().insert(table, datav, debug)
-        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+        val = self.cursor.execute(cmd) if not debug else cmd
+        return
 
     def update(self, table: str, datakv: list, identifierkv: dict, debug: bool = False) -> list:
         """change data in db"""
         cmd = super().update(table, datakv, identifierkv, debug)
-        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+        val= self.cursor.execute(cmd) if not debug else cmd
+        try:
+            return self.cursor.fetchall()
+        except:
+            return []
 
     def select(self, table: str, datak: list, identifierkv: dict = None, debug: bool = False) -> list:
         """get data in db"""
         cmd = super().select(table, datak, identifierkv, debug)
-        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+        val = self.cursor.execute(cmd) if not debug else cmd
+        try:
+            return self.cursor.fetchall()
+        except:
+            return []
 
     def delete(self, table: str, identifierkv: dict, debug: bool = False) -> list:
         """remove data in db"""
         cmd = super().delete(table, identifierkv, debug)
-        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+        val= self.cursor.execute(cmd) if not debug else cmd
+        try:
+            return self.cursor.fetchall()
+        except:
+            return []
 
     def table_len(self, table: str) -> int:
         """len of table in db"""
-        ret = self.select(table, ['count(*)'])
-        return int(ret[0][0])
+        val = self.select(table, ['count(*)'])
+        val = val[0][0]
+        try:
+            return val
+        except:
+            return 0
 
 class Sqllite3DB(ManagerDB):
     """sqlite3 db communication"""
@@ -192,7 +222,7 @@ class Sqllite3DB(ManagerDB):
     def create_table(self, table: str, schema: str, debug: bool = False) -> list:
         """table into db"""
         cmd = f"CREATE TABLE IF NOT EXISTS {table} ({schema});"
-        return self.cursor.execute(cmd).fetchall() if not debug else cmd
+        return self.cursor.execute(cmd) if not debug else cmd
 
     def save(self) -> None:
         """save db"""
@@ -227,7 +257,7 @@ class Table:
     """Generic table object"""
     TABLE = "template"
     TABLEKEY = "template_id"
-    SCHEMA = "template_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT"
+    SCHEMA = "template_id INTEGER NOT NULL PRIMARY KEY"
 
     def __init__(self, table_id: str) -> None:
         self.table_id = table_id
@@ -267,7 +297,7 @@ class User(Table):
     """user table object"""
     TABLE = "users"
     TABLEKEY = "user_id"
-    SCHEMA = "user_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name varchar(255) NOT NULL, mail varchar(255) NOT NULL"
+    SCHEMA = "user_id INTEGER NOT NULL PRIMARY KEY, name varchar(255) NOT NULL, mail varchar(255) NOT NULL"
 
     def __init__(self, user_id: str, name: str, mail: str) -> None:
         super().__init__(user_id)
@@ -296,8 +326,10 @@ class User(Table):
     def list(db: ManagerDB) -> list:
         """user table entries"""
         ret = []
-        for user in db.select(User.TABLE, ['*']):
-            ret.append(User(user[0], user[1], user[2]))
+        users = db.select(User.TABLE, ['*'])
+        if users:
+            for user in users:
+                ret.append(User(user[0], user[1], user[2]))
         return ret
 
     @staticmethod
@@ -317,7 +349,8 @@ class Character(Table):
     """character table object"""
     TABLE = "characters"
     TABLEKEY = "character_id"
-    SCHEMA = "character_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name varchar(255) NOT NULL, description varchar(255), location_id REFERENCES location(id), user_id REFERENCES users(id) NOT NULL"
+    sqlite_SCHEMA = "character_id INTEGER NOT NULL PRIMARY KEY, name varchar(255) NOT NULL, description varchar(255), location_id REFERENCES location(id), user_id REFERENCES users(id) NOT NULL"
+    SCHEMA = "character_id INTEGER NOT NULL PRIMARY KEY, name varchar(255) NOT NULL, description varchar(255), location_id varchar(255), user_id varchar(255)"
 
     def __init__(self, character_id: str, name: str, description: str, location_id: str, user_id: str) -> None:
         super().__init__(character_id)
@@ -331,37 +364,42 @@ class Character(Table):
         return f"({self.character_id}, {self.name}, {self.description}, {self.location_id}, {self.user_id})"
 
     @staticmethod
-    def create(db: ManagerDB, name: str, description: str, user_id: str, location_id: str = '"NULL"') -> str:
+    def create(db: ManagerDB, name: str, description: str, user_id: str, location_id: str = '0') -> str:
         """new character table row"""
         character_id = Character.len(db)+1
-        db.insert(Character.TABLE, [str(
-            character_id), '"'+name+'"', '"'+description+'"', str(location_id), str(user_id)])
+        db.insert(Character.TABLE, [str(character_id), '"'+name+'"', '"'+description+'"', str(location_id), str(user_id)])
         db.save()
         return str(character_id)
 
     @staticmethod
     def get(db: ManagerDB, character_id: str, user_id: str) -> "Character":
         """current user character"""
-        attr = db.select(Character.TABLE, [
-                         '*'], {Character.TABLEKEY: character_id, User.TABLEKEY: user_id})[0]
+        attr = db.select(
+            Character.TABLE,
+            ['*'],
+            {
+                Character.TABLEKEY: character_id,
+                User.TABLEKEY: user_id
+            }
+        )[0]
         return Character(attr[0], attr[1], attr[2], attr[3] if attr[3] else "NULL", attr[4])
 
     @staticmethod
     def list(db: ManagerDB, user_id: str = None) -> list:
         """character table entries"""
         ret = []
-        query = db.select(
-            Character.TABLE, ['*']) if not user_id else db.select(Character.TABLE, ['*'],{User.TABLEKEY: user_id})
-        for character in query:
-            ret.append(
-                Character(
-                    character_id=character[0],
-                    name=character[1],
-                    description=character[2],
-                    location_id=character[3],
-                    user_id=character[4]
+        user_characters = db.select(Character.TABLE, ['*']) if not user_id else db.select(Character.TABLE, ['*'],{User.TABLEKEY: user_id})
+        if (user_characters):
+            for character in user_characters:
+                ret.append(
+                    Character(
+                        character_id=character[0],
+                        name=character[1],
+                        description=character[2],
+                        location_id=character[3],
+                        user_id=character[4]
+                    )
                 )
-            )
         return ret
 
     @staticmethod
@@ -390,7 +428,7 @@ class Location(Table):
     """location table object"""
     TABLE = "locations"
     TABLEKEY = "location_id"
-    SCHEMA = "location_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name varchar(255) NOT NULL, description varchar(255)"
+    SCHEMA = "location_id INTEGER NOT NULL PRIMARY KEY, name varchar(255) NOT NULL, description varchar(255)"
 
     def __init__(self, location_id: str, name: str, description: str) -> None:
         super().__init__(location_id)
@@ -405,8 +443,7 @@ class Location(Table):
     def create(db: ManagerDB, name: str, description: str) -> str:
         """new location table row"""
         location_id = Location.len(db)+1
-        db.insert(Location.TABLE, [str(location_id),
-                  '"'+name+'"', '"'+description+'"'])
+        db.insert(Location.TABLE, [str(location_id), '"'+name+'"', '"'+description+'"'])
         db.save()
         return str(location_id)
 
@@ -414,10 +451,10 @@ class Location(Table):
     def list(db: ManagerDB, location_id_exclude: str = None) -> list:
         """location table entries"""
         ret = []
-        query = db.select(Location.TABLE, ['*']) if not location_id_exclude else db.select(
-            Location.TABLE, ['*'], {f"NOT {Location.TABLEKEY}": location_id_exclude})
-        for location in query:
-            ret.append(Location(location[0], location[1], location[2]))
+        locations = db.select(Location.TABLE, ['*']) if not location_id_exclude else db.select(Location.TABLE, ['*'], {f"NOT {Location.TABLEKEY}": location_id_exclude})
+        if locations:
+            for location in locations:
+                ret.append(Location(location[0], location[1], location[2]))
         return ret
 
     @staticmethod
@@ -466,8 +503,16 @@ class Game:
         """create and assign game character"""
         name = input("Character Name\n> ")
         description = input("Character Description\n> ")
-        self.set_character(Character.create(
-            db, name, description, self.user.user_id), self.user.user_id, db, menu)
+        self.set_character(
+            Character.create(
+                db,
+                name,
+                description,
+                self.user.user_id),
+            self.user.user_id,
+            db,
+            menu
+        )
 
     def set_character(self, character_id: str, user_id: str, db: ManagerDB, menu: Menu) -> None:
         """assign game character"""
@@ -495,7 +540,6 @@ class Game:
 
 def main_game(game: Game, db: ManagerDB):
     """main game func"""
-    # Menu.display_menu(Menu(MenuTitle("New User"),MenuItem(""), [MenuOption()])))]
     users = [MenuOption(
         text="New User", action=lambda: game.set_user_create(db, usermenu))]
     for user in User.list(db):
@@ -512,7 +556,7 @@ def main_game(game: Game, db: ManagerDB):
         characters.append(
             MenuOption(
                 text=character,
-                action=lambda id=character.character_id: 
+                action=lambda id=character.character_id:
                 game.set_character(id, game.user.user_id, db, charactermenu)
             )
         )
@@ -536,8 +580,10 @@ def main_game(game: Game, db: ManagerDB):
         options = locations + \
             [MenuOption(text="Quit", action=lambda: game.exit(db))]
 
-        locationmenu = Menu(MenuTitle("Adventure Game"),
-                            MenuItem(text), options)
+        locationmenu = Menu(MenuTitle("Adventure Game"), 
+                            MenuItem(text), 
+                            options
+                        )
         Menu.display_menu(locationmenu)
         locationmenu.close()
 
@@ -546,12 +592,10 @@ def main():
     #connect = input("Connect Server:Port")
 
     env: EnvManager = EnvManager()
-    db: ManagerDB = MariaDB(env)
+    #db: ManagerDB = Sqllite3DB(env) #MariaDB(env)
+    db: MariaDB = MariaDB(env)
     game: Game = Game()
 
     main_game(game, db)
-
-    
-
 
 main()
