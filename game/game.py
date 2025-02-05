@@ -602,7 +602,8 @@ def main_game(game: Game, db: ManagerDB):
 
         character = game.character.display()
         location = Location.get(db, game.character.location_id).display() if game.character.location_id else "None"
-        character_other = '\n'.join(c.display() for c in Character.list(db, location_id=game.character.location_id, character_id=game.character.character_id))
+        character_other = Character.list(db, location_id=game.character.location_id, character_id=game.character.character_id)
+        character_other = '\n'.join(c.display() for c in character_other) if len(character_other)>0 else "Noone"
         text = f"Character: {character}\nAT {location}\n\nWITH\n{character_other}\n\nSelect Action"
         options = locations + \
             [MenuOption(text="Quit", action=lambda: game.exit(db))]
