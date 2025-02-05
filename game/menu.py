@@ -1,7 +1,58 @@
 """import"""
 import os
 import time
-import msvcrt
+
+class Keyboard:
+    def iskey(self):
+        return False
+    
+    def readkey(self):
+        return ""
+
+keyboardv = Keyboard()
+
+try:
+    import msvcrt
+
+    class KeyboardWindows(Keyboard):
+        def iskey(self):
+            return msvcrt.kbhit()
+
+        def readkey(self):
+            try:
+                if self.iskey():
+                    return msvcrt.getch()
+            except KeyboardInterrupt: exit(0)
+            return b''
+        
+    keyboardv = KeyboardWindows()
+except:pass
+try:
+    import select
+    import sys
+    import termios
+    import tty
+
+    oset = termios.tcgetattr(sys.stdin)
+
+    class KeyboardLinux(Keyboard):
+        def iskey(self):
+            return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
+            
+        def readkey(self):
+            tty.setcbreak(sys.stdin.fileno())
+            if self.iskey():
+                return sys.stdin.read(1).encode()
+            return b''
+    
+    try:
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, oset)
+    except: pass
+
+    keyboardv = KeyboardLinux()
+except:pass
+
+
 from textdecoration import textdecoration as textd
 
 
@@ -111,9 +162,9 @@ class Menu:
         waitforkey = True
         while waitforkey:
             try:
-                if msvcrt.kbhit():
+                if keyboardv.iskey():
                     waitforkey = False
-                    key = msvcrt.getch()
+                    key = keyboardv.readkey()
             except KeyboardInterrupt:
                 waitforkey = False
                 self.close()

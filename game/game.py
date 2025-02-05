@@ -421,7 +421,7 @@ class Character(Table):
             {Location.TABLEKEY: location_id},
             {Character.TABLEKEY: self.character_id}
         )
-    
+
     def action_do(self, db: ManagerDB, action: str) -> list:
         """change character action"""
         return db.update(
