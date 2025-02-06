@@ -5,7 +5,7 @@ venv
 *.db
 .log
 
-.data
+*.data
 
 *.pyc
 __pycache__
