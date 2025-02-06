@@ -5,7 +5,8 @@ import time
 try:
     import keyboard
 except ModuleNotFoundError:
-    print("KEYBOAD NOT INSTALLED")
+    print("KEYBOARD NOT INSTALLED")
+    exit(1)
 
 class Keyboard:
     def __init__(self):
