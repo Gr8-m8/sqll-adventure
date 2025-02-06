@@ -122,11 +122,11 @@ class MariaDB(ManagerDB):
         self.cursor = None
         try:
             self.db = mariadb.connect(
-                user=env.get('DB_USER'),
-                password=env.get('DB_USER_PWD'),
-                host=env.get('IP'),
-                port=int(env.get('PORT')),
-                database=env.get('DB')
+                user=env.get('DB_GAME_USER'),
+                password=env.get('DB_GAME_USER_PWD'),
+                host=env.get('DB_IP'),
+                port=int(env.get('DB_PORT')),
+                database=env.get('DB_FILE')
             )
             self.cursor = self.db.cursor()
             self.db.autocommit = False
@@ -207,7 +207,7 @@ class Sqllite3DB(ManagerDB):
     """sqlite3 db communication"""
 
     def __init__(self, env: EnvManager):
-        self.db = sqlite3.connect(env.get('DB'))
+        self.db = sqlite3.connect(env.get('DB_FILE'))
         self.cursor = self.db.cursor()
         super().__init__(env)
 
@@ -500,8 +500,11 @@ class Game:
     """local game"""
 
     def __init__(self):
-        self.user: User = None
-        self.character: Character = None
+        self.offline = True
+        self.host = "127.0.0.1"
+        self.port = "3306"
+        self.user: User = User("0", "NULL", "NULL")
+        self.character: Character = Character("0", "NULL", "NULL", "NULL", "NULL", "NULL")
 
     def set_user_create(self, db: ManagerDB, menu: Menu) -> None:
         """create and assign game user"""
@@ -620,9 +623,46 @@ def main():
     #connect = input("Connect Server:Port")
 
     env: EnvManager = EnvManager()
-    #db: ManagerDB = Sqllite3DB(env) #MariaDB(env)
-    db: MariaDB = MariaDB(env)
+    db: ManagerDB = ManagerDB(env)
     game: Game = Game()
+    def main_menu_play(menu: Menu):
+        menu.close()
+
+    def main_menu_connect(menu: Menu, game: Game):
+        game.offline = False
+        game.host = input("Host IP\n> ")
+        game.port = input("Host IP Port\n> ")
+        menu.close()
+
+    def main_menu_host_status():
+        os.system("docker ps -f name=sql-adventure-db --format \"table {{.Status}}\"")
+
+    def main_menu_host():
+        os.system("docker-compose up -d")
+    
+    def main_menu_host_stop():
+        os.system("docker-compose down")
+
+    main_menu = Menu(
+        MenuTitle("Adventure Game"),
+        MenuItem("User Select"),
+        [
+            MenuOption("Play", action=lambda: main_menu_play(main_menu)),
+            MenuOption("Connect", action=lambda: main_menu_connect(main_menu, game)),
+            MenuOption("Host", action=lambda: main_menu_host()),
+            MenuOption("Host Stop", action=lambda: main_menu_host_stop()),
+            MenuOption("Quit", action=lambda: game.exit(db)),
+        ]
+    )
+
+    Menu.display_menu(main_menu)
+
+    if not game.offline:
+        db = MariaDB(env)
+    else:
+        db = Sqllite3DB(env)
+
+    
 
     main_game(game, db)
 
