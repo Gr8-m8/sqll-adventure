@@ -105,7 +105,8 @@ def clear(active=True):
 def log(msg):
     """print to log file"""
     with open(".log", "a") as logfile:
-        logfile.write(f"{msg}\n")
+        fs = f"{msg}\n"
+        logfile.write(fs)
 
 
 class ManagerDB:
@@ -154,13 +155,14 @@ class ManagerDB:
         """get data in db"""
         data = ', '.join(datak)
         if identifierkv:
-            identifier = ' AND '.join(
-                f"{k}={v}" for k, v in identifierkv.items())
+            identifier = ' AND '.join(f"{k}={v}" for k, v in identifierkv.items())
             identifier.replace(':', '=')
         else:
             identifier = None
 
-        cmd = f"SELECT {data} FROM {table} WHERE {(identifier)}" if identifier else f"SELECT {data} FROM {table}"
+        fs1 = f"SELECT {data} FROM {table} WHERE {(identifier)}"
+        fs2 = f"SELECT {data} FROM {table}"
+        cmd = fs1 if identifier else fs2
         return cmd
 
     def delete(self, table: str, identifierkv: dict, debug: bool = False) -> str:
@@ -457,7 +459,8 @@ class Character(Table):
         where = {}
         where.update({User.TABLEKEY: user_id}) if user_id else None
         where.update({Location.TABLEKEY: location_id}) if location_id else None
-        where.update({f"NOT {Character.TABLEKEY}": character_id}) if location_id else None
+        fs = f"NOT {Character.TABLEKEY}"
+        where.update({fs: character_id}) if location_id else None
 
         user_characters = db.select(Character.TABLE, ['*']) if not (user_id or location_id or character_id) else db.select(Character.TABLE, ['*'], where)
         if (user_characters):
@@ -531,7 +534,8 @@ class Location(Table):
     def list(db: ManagerDB, location_id_exclude: str = None) -> list:
         """location table entries"""
         ret = []
-        locations = db.select(Location.TABLE, ['*']) if not location_id_exclude else db.select(Location.TABLE, ['*'], {f"NOT {Location.TABLEKEY}": location_id_exclude})
+        fs = f"NOT {Location.TABLEKEY}"
+        locations = db.select(Location.TABLE, ['*']) if not location_id_exclude else db.select(Location.TABLE, ['*'], {fs: location_id_exclude})
         if locations:
             for location in locations:
                 ret.append(Location(location[0], location[1], location[2]))
@@ -669,8 +673,8 @@ def main_game(game: Game, db: ManagerDB):
             MenuOption(text="New Location", action=lambda: game.set_location_create(db, locationmenu))
         ]
         for location in Location.list(db):
-            locations.append(MenuOption(text=f"Go To: {location.display(
-            )}", action=lambda id=location.location_id: game.set_location(id, db, locationmenu)))
+            fs = f"Go To: {location.display()}"
+            locations.append(MenuOption(text=fs, action=lambda id=location.location_id: game.set_location(id, db, locationmenu)))
 
         character = game.character.display()
         location = Location.get(db, game.character.location_id).display() if game.character.location_id else "None"
@@ -696,9 +700,6 @@ def menu_host(game: Game, db: ManagerDB):
 
 
     def host_start(connection: ServerConnection):
-        connection.toServerList("host")
-        connection.toENV()
-
         try:
             status = os.system("docker-compose up -d")
         except:
@@ -723,12 +724,17 @@ def menu_host(game: Game, db: ManagerDB):
         input("CONTINUE")
         return status
     
+    def host_connect_confirm(menu:Menu, connection: ServerConnection):
+        connection.toServerList("host")
+        connection.toENV()
+        menu.close()
+    
     connection: ServerConnection = ServerConnection()
     connect_menu = Menu(
         MenuTitle("Adventure Game"),
         MenuItem("Connect Menu"),
         [
-            MenuOption("Return", action=lambda: connect_menu.close()),
+            MenuOption("Return", action=lambda: host_connect_confirm(connect_menu, connection)),
             MenuOption("Connect IP",  action=lambda: connection.set_ip(input("> "))),
             MenuOption("Connect Port", action=lambda: connection.set_port(input("> "))),
             MenuOption("Connect Host Password", action=lambda: connection.set_server_host_pw(input("> "))),
@@ -761,8 +767,6 @@ def menu_connect(game: Game, menu: Menu, connection: ServerConnection):
         game.start = True
         connection.toServerList("connection")
         connect_menu.close()
-
-    
     connect_menu = Menu(
         MenuTitle("Adventure Game"),
         MenuItem("Connect Menu"),
