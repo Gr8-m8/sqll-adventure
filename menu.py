@@ -5,16 +5,15 @@ import time
 class Keyboard:
     def __init__(self):
         self.keys = {
-            b'\r': "ENTER",
-            b'\x1b': "CLOSE",
-            b'H': "UP",
-            b'P': "DOWN",
-            b'M': "RIGHT",
-            b'K': "LEFT",
+            
         }
         self.bytemap = {
             b'\r': "enter",
-            b'\x1b': "esc",
+            b'\x1b': "escape",
+            b'H': "arrow_up",
+            b'P': "arrow_down",
+            b'M': "arrow_right",
+            b'K': "arrow_left",
         }
         try:
             open('keyboard.settings', 'x')
@@ -35,7 +34,7 @@ class Keyboard:
         with open('keyboard.settings', 'r') as keyfile:
             for line in keyfile:
                 kv = line.split('=')
-                self.keys.update({kv[0].encode():kv[1].strip()})
+                self.keys.update({kv[0]:kv[1].strip()})
             keyfile.close()
     
     def iskey(self):
@@ -89,10 +88,15 @@ else:
         def readkey(self):
             try:
                 if self.iskey():
-                    return self.keys[msvcrt.getch()]
+                    key = msvcrt.getch()
+                    if key in self.bytemap:
+                        key = self.bytemap[key]
+                    if str(key)[2] in self.keys:
+                        key = self.keys[str(key)[2]]
+                    if key in self.keys:
+                        key = self.keys[key]
+                    return key
             except KeyboardInterrupt: exit(0)
-            except KeyError as e:
-                return msvcrt.getch()
             return None
         
     keyboardv = Keyboard_msvcrt()

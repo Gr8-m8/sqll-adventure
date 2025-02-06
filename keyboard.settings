@@ -1,7 +1,11 @@
 w=UP
+arrow_up=UP
 s=DOWN
+arrow_down=DOWN
 d=RIGHT
+arrow_right=RIGHT
 a=LEFT
-esc=CLOSE
-enter=ENTER
+arrow_left=LEFT
  =ENTER
+escape=CLOSE
+enter=ENTER
