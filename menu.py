@@ -3,7 +3,7 @@ import os
 import time
 
 try:
-    import keyboard
+    from pynput.keyboard import Events
 except Exception as e:
     print("KEYBOARD INSTALL ERROR:", e)
     exit(1)
@@ -11,6 +11,7 @@ except Exception as e:
 class Keyboard:
     def __init__(self):
         self.keys = {}
+        self.keys_active = []
         self.cooldown = 0
         try:
             open('keyboard.settings', 'x')
@@ -34,27 +35,26 @@ class Keyboard:
                 kv = line.split('=')
                 self.keys.update({kv[0]:kv[1].strip()})
             keyfile.close()
-        
-    def cooldown_set(self, val: int):
-        self.cooldown = val
-
-    def cooldown_tick(self, val:int=1):
-        self.cooldown = max(0, self.cooldown - val)
-
-    def set_key(self, key):
-        self.key = key
 
     def iskey(self) -> bool:
-        if self.cooldown <= 0:
-            for key in self.keys:
-                if keyboard.is_pressed(key):
+        with Events() as events:
+            for event in events:
+                try:
+                    key = event.key.name
+                except:
+                    key = event.key.char
+                if key in self.keys:
                     return True
         return False
     
     def readkey(self) -> str:
-        if self.cooldown <= 0:
-            for key in self.keys:
-                if keyboard.is_pressed(key):
+        with Events() as events:
+            for event in events:
+                try:
+                    key = event.key.name
+                except:
+                    key = event.key.char
+                if key in self.keys:
                     return self.keys[key]
         return None
 
@@ -169,11 +169,9 @@ class Menu:
         waitforkey = True
         while waitforkey:
             try:
-                keyboardv.cooldown_tick()
                 if keyboardv.iskey():
                     waitforkey = False
                     key = keyboardv.readkey()
-                    keyboardv.cooldown_set(700000)
             except KeyboardInterrupt:
                 waitforkey = False
                 self.close()
