@@ -4,6 +4,7 @@ venv
 
 *.db
 .log
+keyboard.settings
 
 *.data
 

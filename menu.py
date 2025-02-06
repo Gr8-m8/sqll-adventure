@@ -11,6 +11,23 @@ class Keyboard:
     def __init__(self):
         self.keys = {}
         self.cooldown = 0
+        try:
+            open('keyboard.settings', 'x')
+            with open('keyboard.settings', 'w') as keyfile:
+                defaultkeys = [
+                    "w=UP",
+                    "s=DOWN",
+                    "d=RIGHT",
+                    "a=LEFT",
+                    "esc=CLOSE",
+                    "enter=ENTER",
+                    " =ENTER",
+                ]
+                for defaultkey in defaultkeys:
+                    keyfile.write(f"{defaultkey}\n")
+                keyfile.close()
+
+        except: pass
         with open('keyboard.settings', 'r') as keyfile:
             for line in keyfile:
                 kv = line.split('=')
