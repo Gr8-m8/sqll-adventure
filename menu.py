@@ -2,56 +2,45 @@
 import os
 import time
 
+try:
+    import keyboard
+except ModuleNotFoundError:
+    print("KEYBOAD NOT INSTALLED")
+
 class Keyboard:
-    def iskey(self):
+    def __init__(self):
+        self.keys = {}
+        self.cooldown = 0
+        with open('keyboard.settings', 'r') as keyfile:
+            for line in keyfile:
+                kv = line.split('=')
+                self.keys.update({kv[0]:kv[1].strip()})
+            keyfile.close()
+        
+    def cooldown_set(self, val: int):
+        self.cooldown = val
+
+    def cooldown_tick(self, val:int=1):
+        self.cooldown = max(0, self.cooldown - val)
+
+    def set_key(self, key):
+        self.key = key
+
+    def iskey(self) -> bool:
+        if self.cooldown <= 0:
+            for key in self.keys:
+                if keyboard.is_pressed(key):
+                    return True
         return False
     
-    def readkey(self):
-        return b''
+    def readkey(self) -> str:
+        if self.cooldown <= 0:
+            for key in self.keys:
+                if keyboard.is_pressed(key):
+                    return self.keys[key]
+        return None
 
 keyboardv = Keyboard()
-
-try:
-    import msvcrt
-
-    class KeyboardWindows(Keyboard):
-        def iskey(self):
-            return msvcrt.kbhit()
-
-        def readkey(self):
-            try:
-                if self.iskey():
-                    return msvcrt.getch()
-            except KeyboardInterrupt: exit(0)
-            return b''
-        
-    keyboardv = KeyboardWindows()
-except:pass
-try:
-    import select
-    import sys
-    import termios
-    import tty
-
-    oset = termios.tcgetattr(sys.stdin)
-
-    class KeyboardLinux(Keyboard):
-        def iskey(self):
-            return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
-            
-        def readkey(self):
-            tty.setcbreak(sys.stdin.fileno())
-            if self.iskey():
-                return sys.stdin.read(1).encode()
-            return b''
-    
-    try:
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, oset)
-    except: pass
-
-    keyboardv = KeyboardLinux()
-except:pass
-
 
 from textdecoration import textdecoration as textd
 
@@ -162,9 +151,11 @@ class Menu:
         waitforkey = True
         while waitforkey:
             try:
+                keyboardv.cooldown_tick()
                 if keyboardv.iskey():
                     waitforkey = False
                     key = keyboardv.readkey()
+                    keyboardv.cooldown_set(700000)
             except KeyboardInterrupt:
                 waitforkey = False
                 self.close()
@@ -174,29 +165,29 @@ class Menu:
                 time.sleep(0.025)
 
         self.setfeedback(key)
-        if key in [b'H', b'w']:
+        if key == "UP":
             self.options_cursor = (self.options_cursor-1) % len(self.options)
 
-        if key in [b'P', b's']:
+        if key == "DOWN":
             self.options_cursor = (self.options_cursor+1) % len(self.options)
 
-        if key in [b'K', b'-', b'a']:
+        if key == "LEFT":
             try:
                 self.options[self.options_cursor].action('<<')
             except Exception as e:
                 print(e)
 
-        if key in [b'M', b'+', b'd']:
+        if key == "RIGHT":
             try:
                 self.options[self.options_cursor].action('>>')
             except Exception as e:
                 print(e)
 
-        if key in [b'\r', b' ']:
+        if key == "ENTER":
             try:
                 self.options[self.options_cursor].action()
             except Exception as e:
                 print(e)
 
-        if key in [b'\x1b', b'x', b'q']:
+        if key == "CLOSE":
             self.close()
