@@ -5,32 +5,92 @@ import os
 
 from menu import Menu, MenuItem, MenuOption, MenuTitle
 
-
-class EnvManager:
-    """manage env var"""
+class ServerConnection:
+    """server connection"""
     def __init__(self):
-        self.load()
+        self.SERVER_HOST_PASSWORD="PASSWORD"
+        self.DB_GAME_USER="game"
+        self.DB_GAME_USER_PWD="game"
+        self.DB_IP="127.0.0.1"
+        self.DB_PORT="3306"
+        self.DB_FILE="game.db"
+        self.offline = True
 
-    def load(self):
-        """import env var"""
+    def get_data_txt(self) -> list:
+        """connection data as str kv list"""
+        return [
+            f'SERVER_HOST_PASSWORD="{self.SERVER_HOST_PASSWORD}"',
+            f'DB_GAME_USER="{self.DB_GAME_USER}"',
+            f'DB_GAME_USER_PWD="{self.DB_GAME_USER_PWD}"',
+            f'DB_IP="{self.DB_IP}"',
+            f'DB_PORT="{self.DB_PORT}"',
+            f'DB_FILE="{self.DB_FILE}"',
+        ]
+    
+    def get_data(self) -> list:
+        """connection data as v list"""
+        return [
+            self.SERVER_HOST_PASSWORD,
+            self.DB_GAME_USER,
+            self.DB_GAME_USER_PWD,
+            self.DB_IP,
+            self.DB_PORT,
+            self.DB_FILE,
+        ]
+
+    def set_offline(self, val: bool):
+        """set offline status"""
+        self.offline = val
+
+    def set_server_host_pw(self, val: str):
+        """set db root pw"""
+        self.SERVER_HOST_PASSWORD = val
+
+    def set_ip(self, val: str):
+        """set db ip"""
+        self.DB_IP = val
+
+    def set_port(self, val: str):
+        """set db port"""
+        self.DB_PORT = val
+
+    def set_game_user(self, val: str):
+        """set db service user"""
+        self.DB_GAME_USER = val
+
+    def set_game_user_pw(self, val: str):
+        """set db service user pw"""
+        self.DB_GAME_USER_PWD=val
+
+    def set_db_file(self, val: str):
+        """set db file"""
+        self.DB_FILE=val
+
+    def toENV(self, data: list = None):
+        """values to .env for docker host"""
         try:
-            with open('.env', 'r', encoding='utf-8') as envfile:
-                for line in envfile:
-                    if '=' in line:
-                        #print(line.split('=')[0], "=", line.split('=')[1])
-                        os.environ[line.split('=')[0]] = line.split('=')[1].replace('"','').strip()
-        except FileNotFoundError:
-            open('.env', 'x')
+            open('.env', 'x', encoding='utf-8')
         except Exception as e:
-            exit(1)
+            print(e)
+        with open('.env', 'w', encoding='utf-8') as file:
+            if not data:
+                data = self.get_data_txt()
+            for dataentry in data:
+                file.write(dataentry+"\n")
+            file.close()
 
-    def get(self, key:str) -> str:
-        """set none var & read env var"""
-        if not key in os.environ:
-            os.environ[key] = input(f"Set: {key}=").replace('"','').strip()
-            with open('.env', 'a') as envfile:
-                envfile.write(f'{key}="{os.environ[key]}"\n')
-        return os.environ[key]
+
+    def toServerList(self, listname: str) -> list:
+        """connection history"""
+        try:
+            open(f'{listname}_server.data', 'x', encoding='utf-8')
+        except Exception as e:
+            print(e)
+        with open(f'{listname}_server.data', 'a', encoding='utf-8') as file:
+            data = self.get_data_txt()
+            file.write('|'.join(data)+"\n")
+            file.close()
+        return data
 
 def clear(active=True):
     """Clear Console"""
@@ -38,14 +98,15 @@ def clear(active=True):
         os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def log():
+def log(msg):
     """print to log file"""
-    # open(".log", "w")
+    with open(".log", "a") as logfile:
+        logfile.write(f"{msg}\n")
 
 
 class ManagerDB:
     """db communication"""
-    def __init__(self, env: EnvManager):
+    def __init__(self, connection: ServerConnection):
         self.create_table(User.TABLE, User.SCHEMA)
         self.create_table(Location.TABLE, Location.SCHEMA)
         self.create_table(Character.TABLE, Character.SCHEMA)
@@ -117,20 +178,20 @@ class ManagerDB:
 class MariaDB(ManagerDB):
     """Mariadb db communication"""
 
-    def __init__(self, env: EnvManager):
+    def __init__(self, connection: ServerConnection):
         self.db = None
         self.cursor = None
         try:
             self.db = mariadb.connect(
-                user=env.get('DB_GAME_USER'),
-                password=env.get('DB_GAME_USER_PWD'),
-                host=env.get('DB_IP'),
-                port=int(env.get('DB_PORT')),
-                database=env.get('DB_FILE')
+                user=str(connection.DB_GAME_USER),
+                password=str(connection.DB_GAME_USER_PWD),
+                host=str(connection.DB_IP),
+                port=int(str(connection.DB_PORT)),
+                database=str(connection.DB_FILE)
             )
             self.cursor = self.db.cursor()
             self.db.autocommit = False
-            super().__init__(env)
+            super().__init__(connection)
         except mariadb.Error as e:
             print("MARIADB ERROR:", e)
             exit(1)
@@ -206,10 +267,10 @@ class MariaDB(ManagerDB):
 class Sqllite3DB(ManagerDB):
     """sqlite3 db communication"""
 
-    def __init__(self, env: EnvManager):
-        self.db = sqlite3.connect(env.get('DB_FILE'))
+    def __init__(self, connection: ServerConnection):
+        self.db = sqlite3.connect(connection.DB_FILE)
         self.cursor = self.db.cursor()
-        super().__init__(env)
+        super().__init__(connection)
 
     def close(self):
         return super().close()
@@ -500,9 +561,6 @@ class Game:
     """local game"""
 
     def __init__(self):
-        self.offline = True
-        self.host = "127.0.0.1"
-        self.port = "3306"
         self.user: User = User("0", "NULL", "NULL")
         self.character: Character = Character("0", "NULL", "NULL", "NULL", "NULL", "NULL")
 
@@ -575,6 +633,9 @@ def main_game(game: Game, db: ManagerDB):
                     MenuItem("Select User"), users)
     Menu.display_menu(usermenu)
 
+    if game.user.user_id == "0":
+        game.exit(db)
+
     characters = [MenuOption(text="New Character", action=lambda: game.set_character_create(db, charactermenu))]
     for character in Character.list(db, user_id=game.user.user_id):
         characters.append(
@@ -591,6 +652,9 @@ def main_game(game: Game, db: ManagerDB):
         characters
     )
     Menu.display_menu(charactermenu)
+
+    if game.character.character_id == "0":
+        game.exit(db)
 
     gameloop = True
     while gameloop and game.user and game.character:
@@ -618,49 +682,129 @@ def main_game(game: Game, db: ManagerDB):
         Menu.display_menu(locationmenu)
         locationmenu.close()
 
-def main():
-    """main scrip execution"""
-    #connect = input("Connect Server:Port")
+def menu_host(game: Game, db: ManagerDB):
 
-    env: EnvManager = EnvManager()
-    db: ManagerDB = ManagerDB(env)
-    game: Game = Game()
+    def status():
+        status = os.system("docker ps -f name=sql-adventure-db --format \"table {{.Status}}\"")
+        input("CONTINUE")
+        return status
+
+
+    def host_start(connection: ServerConnection):
+        connection.toServerList("host")
+        connection.toENV()
+
+        try:
+            status = os.system("docker-compose up -d")
+        except:
+            status = None
+        try:
+            status = os.system("docker-compose up -d")
+        except:
+            status = None
+        input("CONTINUE")
+        return status
+    
+    
+    def host_stop():
+        try:
+            status = os.system("docker-compose down")
+        except:
+            status = None
+        try:
+            status = os.system("docker-compose down")
+        except:
+            status = None
+        input("CONTINUE")
+        return status
+    
+    connection: ServerConnection = ServerConnection()
+    connect_menu = Menu(
+        MenuTitle("Adventure Game"),
+        MenuItem("Connect Menu"),
+        [
+            MenuOption("Return", action=lambda: connect_menu.close()),
+            MenuOption("Connect IP",  action=lambda: connection.set_ip(input("> "))),
+            MenuOption("Connect Port", action=lambda: connection.set_port(input("> "))),
+            MenuOption("Connect Host Password", action=lambda: connection.set_server_host_pw(input("> "))),
+            MenuOption("Advanced Connect DB_FILE", action=lambda: connection.set_db_file(input("> "))),
+            MenuOption("Advanced Connect DB_GAME_USER", action=lambda: connection.set_game_user(input("> "))),
+            MenuOption("Advanced Connect DB_GAME_USER_PW", action=lambda: connection.set_game_user_pw(input("> "))),
+            
+        ]
+    )
+    
+    host_menu = Menu(
+        MenuTitle("Adventure Game"),
+        MenuItem("Host Menu"),
+        [
+            MenuOption("Return", action= lambda: host_menu.close()),
+            MenuOption("Configure Host", action=lambda: Menu.display_menu(connect_menu)),
+            MenuOption("Start Host", action=lambda c=connection: host_start(c)),
+            MenuOption("Stop Host", action= lambda: host_stop()),
+            MenuOption("Status Host", action= lambda: "")
+        ]
+    )
+
+    Menu.display_menu(host_menu)
+
+def menu_connect(menu: Menu, connection: ServerConnection):
+    menu.close()
+    connection.set_offline(False)
+
+    def connect_confirm(connection: ServerConnection):
+        connection.toServerList("connection")
+        connect_menu.close()
+
+    
+    connect_menu = Menu(
+        MenuTitle("Adventure Game"),
+        MenuItem("Connect Menu"),
+        [
+            MenuOption("Confirm", action=lambda: connect_confirm(connection)),
+            MenuOption("Connect IP",  action=lambda: connection.set_ip(input("> "))),
+            MenuOption("Connect Port", action=lambda: connection.set_port(input("> "))),
+            MenuOption("Advanced Connect DB_FILE", action=lambda: connection.set_db_file(input("> "))),
+            MenuOption("Advanced Connect DB_GAME_USER", action=lambda: connection.set_game_user(input("> "))),
+            MenuOption("Advanced Connect DB_GAME_USER_PW", action=lambda: connection.set_game_user_pw(input("> "))),
+            
+        ]
+    )
+    Menu.display_menu(connect_menu)
+
+def menu_main(game: Game, db: ManagerDB, connection: ServerConnection):
+
     def main_menu_play(menu: Menu):
         menu.close()
 
-    def main_menu_connect(menu: Menu, game: Game):
-        game.offline = False
-        game.host = input("Host IP\n> ")
-        game.port = input("Host IP Port\n> ")
-        menu.close()
-
-    def main_menu_host_status():
-        os.system("docker ps -f name=sql-adventure-db --format \"table {{.Status}}\"")
-
-    def main_menu_host():
-        os.system("docker-compose up -d")
-    
-    def main_menu_host_stop():
-        os.system("docker-compose down")
-
     main_menu = Menu(
         MenuTitle("Adventure Game"),
-        MenuItem("User Select"),
+        MenuItem("Main Menu"),
         [
-            MenuOption("Play", action=lambda: main_menu_play(main_menu)),
-            MenuOption("Connect", action=lambda: main_menu_connect(main_menu, game)),
-            MenuOption("Host", action=lambda: main_menu_host()),
-            MenuOption("Host Stop", action=lambda: main_menu_host_stop()),
-            MenuOption("Quit", action=lambda: game.exit(db)),
+            MenuOption("Play Offline", action=lambda: main_menu_play(main_menu)),
+            MenuOption("Play Online", action=lambda: menu_connect(main_menu, connection)),
+            MenuOption("Host Server", action=lambda: menu_host(game, db)),
+            MenuOption("Quit Game", action=lambda: game.exit(db)),
         ]
     )
 
     Menu.display_menu(main_menu)
 
-    if not game.offline:
-        db = MariaDB(env)
+
+def main():
+    """main scrip execution"""
+    #connect = input("Connect Server:Port")
+
+    connection: ServerConnection = ServerConnection()
+    db: ManagerDB = ManagerDB(connection)
+    game: Game = Game()
+    
+    menu_main(game, db, connection)
+
+    if not connection.offline:
+        db = MariaDB(connection)
     else:
-        db = Sqllite3DB(env)
+        db = Sqllite3DB(connection)
 
     
 
