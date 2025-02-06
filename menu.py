@@ -2,17 +2,20 @@
 import os
 import time
 
-try:
-    from pynput.keyboard import Events
-except Exception as e:
-    print("KEYBOARD INSTALL ERROR:", e)
-    exit(1)
-
 class Keyboard:
     def __init__(self):
-        self.keys = {}
-        self.keys_active = []
-        self.cooldown = 0
+        self.keys = {
+            b'\r': "ENTER",
+            b'\x1b': "CLOSE",
+            b'H': "UP",
+            b'P': "DOWN",
+            b'M': "RIGHT",
+            b'K': "LEFT",
+        }
+        self.bytemap = {
+            b'\r': "enter",
+            b'\x1b': "esc",
+        }
         try:
             open('keyboard.settings', 'x')
             with open('keyboard.settings', 'w') as keyfile:
@@ -28,37 +31,71 @@ class Keyboard:
                 for defaultkey in defaultkeys:
                     keyfile.write(f"{defaultkey}\n")
                 keyfile.close()
-
         except: pass
         with open('keyboard.settings', 'r') as keyfile:
             for line in keyfile:
                 kv = line.split('=')
-                self.keys.update({kv[0]:kv[1].strip()})
+                self.keys.update({kv[0].encode():kv[1].strip()})
             keyfile.close()
-
-    def iskey(self) -> bool:
-        with Events() as events:
-            for event in events:
-                try:
-                    key = event.key.name
-                except:
-                    key = event.key.char
-                if key in self.keys:
-                    return True
+    
+    def iskey(self):
         return False
     
-    def readkey(self) -> str:
-        with Events() as events:
-            for event in events:
-                try:
-                    key = event.key.name
-                except:
-                    key = event.key.char
-                if key in self.keys:
-                    return self.keys[key]
+    def readkey(self):
         return None
 
-keyboardv = Keyboard()
+if False:
+    try:
+        from pynput.keyboard import Events
+    except Exception as e:
+        print("KEYBOARD INSTALL ERROR:", e)
+        exit(1)
+
+    class Keyboard_pynput(Keyboard):
+        def __init__(self):
+            super().__init__()
+            self.cooldown = 0
+
+        def iskey(self) -> bool:
+            with Events() as events:
+                for event in events:
+                    try:
+                        key = event.key.name
+                    except:
+                        key = event.key.char
+                    if key in self.keys:
+                        return True
+            return False
+        
+        def readkey(self) -> str:
+            with Events() as events:
+                for event in events:
+                    try:
+                        key = event.key.name
+                    except:
+                        key = event.key.char
+                    if key in self.keys:
+                        return self.keys[key]
+            return None
+
+    keyboardv = Keyboard_pynput()
+else:
+    import msvcrt
+
+    class Keyboard_msvcrt(Keyboard):
+        def iskey(self):
+            return msvcrt.kbhit()
+
+        def readkey(self):
+            try:
+                if self.iskey():
+                    return self.keys[msvcrt.getch()]
+            except KeyboardInterrupt: exit(0)
+            except KeyError as e:
+                return msvcrt.getch()
+            return None
+        
+    keyboardv = Keyboard_msvcrt()
 
 from textdecoration import textdecoration as textd
 
