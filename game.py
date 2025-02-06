@@ -561,6 +561,7 @@ class Game:
     """local game"""
 
     def __init__(self):
+        self.start = False
         self.user: User = User("0", "NULL", "NULL")
         self.character: Character = Character("0", "NULL", "NULL", "NULL", "NULL", "NULL")
 
@@ -748,11 +749,12 @@ def menu_host(game: Game, db: ManagerDB):
 
     Menu.display_menu(host_menu)
 
-def menu_connect(menu: Menu, connection: ServerConnection):
+def menu_connect(game: Game, menu: Menu, connection: ServerConnection):
     menu.close()
     connection.set_offline(False)
 
-    def connect_confirm(connection: ServerConnection):
+    def connect_confirm(connection: ServerConnection, game: Game):
+        game.start = True
         connection.toServerList("connection")
         connect_menu.close()
 
@@ -761,7 +763,7 @@ def menu_connect(menu: Menu, connection: ServerConnection):
         MenuTitle("Adventure Game"),
         MenuItem("Connect Menu"),
         [
-            MenuOption("Confirm", action=lambda: connect_confirm(connection)),
+            MenuOption("Confirm", action=lambda: connect_confirm(connection, game)),
             MenuOption("Connect IP",  action=lambda: connection.set_ip(input("> "))),
             MenuOption("Connect Port", action=lambda: connection.set_port(input("> "))),
             MenuOption("Advanced Connect DB_FILE", action=lambda: connection.set_db_file(input("> "))),
@@ -774,15 +776,16 @@ def menu_connect(menu: Menu, connection: ServerConnection):
 
 def menu_main(game: Game, db: ManagerDB, connection: ServerConnection):
 
-    def main_menu_play(menu: Menu):
+    def main_menu_play(menu: Menu, game: Game):
+        game.start=True
         menu.close()
 
     main_menu = Menu(
         MenuTitle("Adventure Game"),
         MenuItem("Main Menu"),
         [
-            MenuOption("Play Offline", action=lambda: main_menu_play(main_menu)),
-            MenuOption("Play Online", action=lambda: menu_connect(main_menu, connection)),
+            MenuOption("Play Offline", action=lambda: main_menu_play(main_menu, game)),
+            MenuOption("Play Online", action=lambda: menu_connect(game, main_menu, connection)),
             MenuOption("Host Server", action=lambda: menu_host(game, db)),
             MenuOption("Quit Game", action=lambda: game.exit(db)),
         ]
@@ -806,8 +809,7 @@ def main():
     else:
         db = Sqllite3DB(connection)
 
-    
-
-    main_game(game, db)
+    if game.start:
+        main_game(game, db)
 
 main()
