@@ -4,8 +4,8 @@ import time
 
 try:
     import keyboard
-except ModuleNotFoundError:
-    print("KEYBOARD NOT INSTALLED")
+except Exception as e:
+    print("KEYBOARD INSTALL ERROR:", e)
     exit(1)
 
 class Keyboard:
