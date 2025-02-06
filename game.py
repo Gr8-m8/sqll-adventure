@@ -1,6 +1,10 @@
 """db game"""
 import sqlite3
-import mariadb
+try:
+    import mariadb
+    OFFLINE = False
+except ModuleNotFoundError:
+    OFFLINE = True
 import os
 
 from menu import Menu, MenuItem, MenuOption, MenuTitle
@@ -785,8 +789,8 @@ def menu_main(game: Game, db: ManagerDB, connection: ServerConnection):
         MenuItem("Main Menu"),
         [
             MenuOption("Play Offline", action=lambda: main_menu_play(main_menu, game)),
-            MenuOption("Play Online", action=lambda: menu_connect(game, main_menu, connection)),
-            MenuOption("Host Server", action=lambda: menu_host(game, db)),
+            MenuOption("Play Online", action=lambda: menu_connect(game, main_menu, connection)) if not OFFLINE else MenuOption("X Play Online Disabled"),
+            MenuOption("Host Server", action=lambda: menu_host(game, db)) if not OFFLINE else MenuOption("X Host Server Disabled"),
             MenuOption("Quit Game", action=lambda: game.exit(db)),
         ]
     )
@@ -804,10 +808,10 @@ def main():
     
     menu_main(game, db, connection)
 
-    if not connection.offline:
-        db = MariaDB(connection)
-    else:
+    if connection.offline or OFFLINE:
         db = Sqllite3DB(connection)
+    else:
+        db = MariaDB(connection)
 
     if game.start:
         main_game(game, db)
