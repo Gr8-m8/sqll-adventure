@@ -42,43 +42,9 @@ class Keyboard:
     
     def readkey(self):
         return None
-
-if False:
-    try:
-        from pynput.keyboard import Events
-    except Exception as e:
-        print("KEYBOARD INSTALL ERROR:", e)
-        exit(1)
-
-    class Keyboard_pynput(Keyboard):
-        def __init__(self):
-            super().__init__()
-            self.cooldown = 0
-
-        def iskey(self) -> bool:
-            with Events() as events:
-                for event in events:
-                    try:
-                        key = event.key.name
-                    except:
-                        key = event.key.char
-                    if key in self.keys:
-                        return True
-            return False
-        
-        def readkey(self) -> str:
-            with Events() as events:
-                for event in events:
-                    try:
-                        key = event.key.name
-                    except:
-                        key = event.key.char
-                    if key in self.keys:
-                        return self.keys[key]
-            return None
-
-    keyboardv = Keyboard_pynput()
-else:
+    
+keyboardv = Keyboard()
+try:
     import msvcrt
 
     class Keyboard_msvcrt(Keyboard):
@@ -100,6 +66,31 @@ else:
             return None
         
     keyboardv = Keyboard_msvcrt()
+except Exception as e:
+    print("FAILED IMPORT WINDOWS KEYBOARD:", e)
+try:
+    import getch
+
+    class Keyboard_getch(Keyboard):
+        def iskey(self):
+            return True #if getch.getch() else False
+
+        def readkey(self):
+            try:
+                if self.iskey():
+                    key = getch.getch()
+                    if key in self.bytemap:
+                        key = self.bytemap[key]
+                    if key in self.keys:
+                        key = self.keys[key]
+                    return key
+            except KeyboardInterrupt: exit(0)
+            return None
+        
+    keyboardv = Keyboard_getch()
+
+except Exception as e:
+    print("FAILED IMPORT LINUX KEYBOARD:", e)
 
 from textdecoration import textdecoration as textd
 
@@ -208,18 +199,20 @@ class Menu:
         """Activate Manu Item"""
         key = None
         waitforkey = True
-        while waitforkey:
-            try:
+        try:
+            while waitforkey:
                 if keyboardv.iskey():
                     waitforkey = False
                     key = keyboardv.readkey()
-            except KeyboardInterrupt:
-                waitforkey = False
-                self.close()
+            
 
             if not blocking:
                 waitforkey = False
                 time.sleep(0.025)
+
+        except KeyboardInterrupt:
+                waitforkey = False
+                self.close()
 
         self.setfeedback(key)
         if key == "UP":
