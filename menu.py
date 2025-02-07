@@ -113,7 +113,8 @@ class MenuItem:
 
     def display_str(self):
         """Display format STR"""
-        return f"{self.text}{f": {self.desc}" if self.desc else ""}"
+        fs = f": {self.desc}" if self.desc else ""
+        return f"{self.text}{fs}"
 
     def __str__(self) -> str:
         return self.display_str()
