@@ -2,7 +2,10 @@
 import os
 import time
 
+from textdecoration import textdecoration as textd
+
 class Keyboard:
+    """read async keyboard input"""
     def __init__(self):
         self.keys = {
             
@@ -38,9 +41,11 @@ class Keyboard:
             keyfile.close()
     
     def iskey(self):
+        """if key pressed"""
         return False
     
     def readkey(self):
+        """get key value"""
         return None
     
 keyboardv = Keyboard()
@@ -48,6 +53,7 @@ try:
     import msvcrt
 
     class Keyboard_msvcrt(Keyboard):
+        """windows keyboard"""
         def iskey(self):
             return msvcrt.kbhit()
 
@@ -72,6 +78,7 @@ try:
     import getch
 
     class Keyboard_getch(Keyboard):
+        """linux keyboard"""
         def iskey(self):
             return True #if getch.getch() else False
 
@@ -92,7 +99,7 @@ try:
 except Exception as e:
     print("FAILED IMPORT LINUX KEYBOARD:", e)
 
-from textdecoration import textdecoration as textd
+
 
 
 def console_clear():
