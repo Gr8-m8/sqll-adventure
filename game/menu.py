@@ -129,19 +129,19 @@ class Menu:
             try:
                 self.options[self.options_cursor].action('<<')
             except Exception as e:
-                print(e)
+                usysf.log(f"MENU OPTION DECREESE ERROR: {e}")
 
         if key == "RIGHT":
             try:
                 self.options[self.options_cursor].action('>>')
             except Exception as e:
-                print(e)
+                usysf.log(f"MENUOPTION INCREASE ERROR: {e}")
 
         if key == "ENTER":
             try:
                 self.options[self.options_cursor].action()
             except Exception as e:
-                print(e)
+                usysf.log(f"MENUOPTION ACTIVATE ERROR: {e}")
 
         if key == "CLOSE":
             self.close()

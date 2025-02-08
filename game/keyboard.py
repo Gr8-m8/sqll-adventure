@@ -1,3 +1,5 @@
+import usysf
+
 class Keyboard:
     """read async keyboard input"""
     def __init__(self):
@@ -35,7 +37,7 @@ class Keyboard:
                     keyfile.write(f"{defaultkey}\n")
                 keyfile.close()
         except Exception as e: 
-            print("KEYBIND ERROR:", e)
+            usysf.log(f"KEYBIND ERROR: {e}")
         with open(keyfilename, 'r') as keyfile:
             for line in keyfile:
                 kv = line.split('=')
@@ -76,7 +78,7 @@ try:
         
     KEYBOARD = Keyboard_msvcrt()
 except Exception as e:
-    print("FAILED IMPORT WINDOWS KEYBOARD:", e)
+    usysf.log(f"FAILED IMPORT WINDOWS KEYBOARD: {e}")
 try:
     import getch
 
@@ -100,4 +102,4 @@ try:
     KEYBOARD = Keyboard_getch()
 
 except Exception as e:
-    print("FAILED IMPORT LINUX KEYBOARD:", e)
+    usysf.log(f"FAILED IMPORT LINUX KEYBOARD: {e}")

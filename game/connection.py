@@ -1,3 +1,4 @@
+import usysf
 class ServerConnection:
     """server connection"""
     def __init__(self):
@@ -64,7 +65,7 @@ class ServerConnection:
         try:
             open('.env', 'x', encoding='utf-8')
         except Exception as e:
-            print(e)
+            usysf.log(f"CONNECTION .ENV FILE EXSISTS ERROR: {e}")
         with open('.env', 'w', encoding='utf-8') as file:
             if not data:
                 data = self.get_data_txt()
@@ -78,7 +79,7 @@ class ServerConnection:
         try:
             open(f'data/{listname}_server.data', 'x', encoding='utf-8')
         except Exception as e:
-            print(e)
+            usysf.log(f"CONNECTION SERVER HISTORYFILE {listname} EXSISTS ERROR:{e}")
         with open(f'data/{listname}_server.data', 'a', encoding='utf-8') as file:
             data = self.get_data_txt()
             file.write('|'.join(data)+"\n")

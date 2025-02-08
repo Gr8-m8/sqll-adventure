@@ -12,6 +12,8 @@ def log(msg, logfile="", consolelog=True):
     with open(f"logs/{logfile}.log", "a") as logfile:
         fs = f"{msg}\n"
         logfile.write(fs)
+        if consolelog:
+            print(fs)
         
 
 def shell(cmd):

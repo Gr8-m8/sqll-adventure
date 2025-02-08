@@ -6,6 +6,7 @@ except ModuleNotFoundError:
     OFFLINE = True
 
 from connection import ServerConnection
+import usysf
 
 class ManagerDB:
     STATUS = False
@@ -98,7 +99,7 @@ class MariaDB(ManagerDB):
             ManagerDB.STATUS = True
         except mariadb.Error as e:
             ManagerDB.STATUS = False
-            print("MARIADB ERROR:", e)
+            usysf.log("MARIADB ERROR:", e)
             input("CONFIRM")
             #exit(1)
 
