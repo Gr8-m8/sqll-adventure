@@ -99,7 +99,7 @@ class MariaDB(ManagerDB):
             ManagerDB.STATUS = True
         except mariadb.Error as e:
             ManagerDB.STATUS = False
-            usysf.log("MARIADB ERROR:", e)
+            usysf.log(f"MARIADB ERROR: {e}")
             input("CONFIRM")
             #exit(1)
 

@@ -244,8 +244,6 @@ def menu_main(game: Game, db: ManagerDB, connection: ServerConnection):
 
 def main():
     """main scrip execution"""
-    #connect = input("Connect Server:Port")
-
     connection: ServerConnection = ServerConnection()
     db: ManagerDB = ManagerDB(connection)
     game: Game = Game()
