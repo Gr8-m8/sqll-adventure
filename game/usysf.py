@@ -9,7 +9,7 @@ def clear(active=CLEAR):
 
 def log(msg, logfile="", consolelog=True):
     """print to log file"""
-    with open(f"logs/{logfile}.log", "a") as logfile:
+    with open(f"{logfile}.log", "a") as logfile:
         fs = f"{msg}\n"
         logfile.write(fs)
         if consolelog:
