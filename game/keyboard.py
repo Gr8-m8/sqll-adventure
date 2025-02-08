@@ -12,9 +12,10 @@ class Keyboard:
             b'M': "arrow_right",
             b'K': "arrow_left",
         }
+        keyfilename = 'settings/keyboard.settings'
         try:
-            open('settings/keyboard.settings', 'x')
-            with open('settings/keyboard.settings', 'w') as keyfile:
+            open(keyfilename, 'x')
+            with open(keyfilename, 'w') as keyfile:
                 defaultkeys = [
                     "w=UP",
                     "s=DOWN",
@@ -23,12 +24,19 @@ class Keyboard:
                     "esc=CLOSE",
                     "enter=ENTER",
                     " =ENTER",
+                    "arrow_up=UP",
+                    "arrow_down=DOWN",
+                    "arrow_right=RIGHT",
+                    "arrow_left=LEFT",
+                    "escape=CLOSE",
+                    "enter=ENTER",
                 ]
                 for defaultkey in defaultkeys:
                     keyfile.write(f"{defaultkey}\n")
                 keyfile.close()
-        except: pass
-        with open('settings/keyboard.settings', 'r') as keyfile:
+        except Exception as e: 
+            print("KEYBIND ERROR:", e)
+        with open(keyfilename, 'r') as keyfile:
             for line in keyfile:
                 kv = line.split('=')
                 self.keys.update({kv[0]:kv[1].strip()})

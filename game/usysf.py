@@ -7,11 +7,12 @@ def clear(active=CLEAR):
         os.system('cls' if isWindows() else 'clear')
 
 
-def log(msg, logfile=""):
+def log(msg, logfile="", consolelog=True):
     """print to log file"""
     with open(f"logs/{logfile}.log", "a") as logfile:
         fs = f"{msg}\n"
         logfile.write(fs)
+        
 
 def shell(cmd):
     """execute shell command"""

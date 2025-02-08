@@ -7,6 +7,6 @@ venv
 keyboard.settings
 
 *.data
-
+.sql
 *.pyc
 __pycache__
