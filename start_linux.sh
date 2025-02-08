@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 gam/start.py
+python3 game/start.py

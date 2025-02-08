@@ -14,7 +14,7 @@ class Keyboard:
             b'M': "arrow_right",
             b'K': "arrow_left",
         }
-        keyfilename = 'settings/keyboard.settings'
+        keyfilename = 'keyboard.settings'
         try:
             open(keyfilename, 'x')
             with open(keyfilename, 'w') as keyfile:
