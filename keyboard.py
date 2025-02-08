@@ -13,8 +13,8 @@ class Keyboard:
             b'K': "arrow_left",
         }
         try:
-            open('keyboard.settings', 'x')
-            with open('keyboard.settings', 'w') as keyfile:
+            open('settings/keyboard.settings', 'x')
+            with open('settings/keyboard.settings', 'w') as keyfile:
                 defaultkeys = [
                     "w=UP",
                     "s=DOWN",
@@ -28,7 +28,7 @@ class Keyboard:
                     keyfile.write(f"{defaultkey}\n")
                 keyfile.close()
         except: pass
-        with open('keyboard.settings', 'r') as keyfile:
+        with open('settings/keyboard.settings', 'r') as keyfile:
             for line in keyfile:
                 kv = line.split('=')
                 self.keys.update({kv[0]:kv[1].strip()})

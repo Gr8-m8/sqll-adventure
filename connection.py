@@ -76,10 +76,10 @@ class ServerConnection:
     def toServerList(self, listname: str) -> list:
         """connection history"""
         try:
-            open(f'{listname}_server.data', 'x', encoding='utf-8')
+            open(f'data/{listname}_server.data', 'x', encoding='utf-8')
         except Exception as e:
             print(e)
-        with open(f'{listname}_server.data', 'a', encoding='utf-8') as file:
+        with open(f'data/{listname}_server.data', 'a', encoding='utf-8') as file:
             data = self.get_data_txt()
             file.write('|'.join(data)+"\n")
             file.close()
