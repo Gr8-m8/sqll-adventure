@@ -4,112 +4,8 @@ import time
 
 from textdecoration import textdecoration as textd
 
-class Keyboard:
-    """read async keyboard input"""
-    def __init__(self):
-        self.keys = {
-            
-        }
-        self.bytemap = {
-            b'\r': "enter",
-            b'\x1b': "escape",
-            b'H': "arrow_up",
-            b'P': "arrow_down",
-            b'M': "arrow_right",
-            b'K': "arrow_left",
-        }
-        try:
-            open('keyboard.settings', 'x')
-            with open('keyboard.settings', 'w') as keyfile:
-                defaultkeys = [
-                    "w=UP",
-                    "s=DOWN",
-                    "d=RIGHT",
-                    "a=LEFT",
-                    "esc=CLOSE",
-                    "enter=ENTER",
-                    " =ENTER",
-                ]
-                for defaultkey in defaultkeys:
-                    keyfile.write(f"{defaultkey}\n")
-                keyfile.close()
-        except: pass
-        with open('keyboard.settings', 'r') as keyfile:
-            for line in keyfile:
-                kv = line.split('=')
-                self.keys.update({kv[0]:kv[1].strip()})
-            keyfile.close()
-    
-    def iskey(self):
-        """if key pressed"""
-        return False
-    
-    def readkey(self):
-        """get key value"""
-        return None
-    
-keyboardv = Keyboard()
-try:
-    import msvcrt
-
-    class Keyboard_msvcrt(Keyboard):
-        """windows keyboard"""
-        def iskey(self):
-            return msvcrt.kbhit()
-
-        def readkey(self):
-            try:
-                if self.iskey():
-                    key = msvcrt.getch()
-                    if key in self.bytemap:
-                        key = self.bytemap[key]
-                    if str(key)[2] in self.keys:
-                        key = self.keys[str(key)[2]]
-                    if key in self.keys:
-                        key = self.keys[key]
-                    return key
-            except KeyboardInterrupt: exit(0)
-            return None
-        
-    keyboardv = Keyboard_msvcrt()
-except Exception as e:
-    print("FAILED IMPORT WINDOWS KEYBOARD:", e)
-try:
-    import getch
-
-    class Keyboard_getch(Keyboard):
-        """linux keyboard"""
-        def iskey(self):
-            return True #if getch.getch() else False
-
-        def readkey(self):
-            try:
-                if self.iskey():
-                    key = getch.getch()
-                    if key in self.bytemap:
-                        key = self.bytemap[key]
-                    if key in self.keys:
-                        key = self.keys[key]
-                    return key
-            except KeyboardInterrupt: exit(0)
-            return None
-        
-    keyboardv = Keyboard_getch()
-
-except Exception as e:
-    print("FAILED IMPORT LINUX KEYBOARD:", e)
-
-
-
-
-def console_clear():
-    """Clear Console"""
-    CLEAR = True
-    os.system('cls' if os.name == 'nt' else 'clear') if CLEAR else None
-
-
-CONSOLECLEAR = True
-
+from keyboard import KEYBOARD
+import usysf
 
 class MenuItem:
     """Generic Menu Item"""
@@ -179,8 +75,8 @@ class Menu:
     def close(self):
         """Deactivate Menu"""
         self.active = False
-        if CONSOLECLEAR:
-            console_clear()
+        if usysf.CLEAR:
+            usysf.clear()
 
     def setfeedback(self, feedback):
         """Force Output"""
@@ -188,8 +84,8 @@ class Menu:
 
     def display(self):
         """Console Output"""
-        if CONSOLECLEAR:
-            console_clear()
+        if usysf.CLEAR:
+            usysf.clear()
         print(self.title)
         print(self.text)
         self.options[self.options_cursor].selected = True
@@ -209,9 +105,9 @@ class Menu:
         waitforkey = True
         try:
             while waitforkey:
-                if keyboardv.iskey():
+                if KEYBOARD.iskey():
                     waitforkey = False
-                    key = keyboardv.readkey()
+                    key = KEYBOARD.readkey()
             
 
             if not blocking:
