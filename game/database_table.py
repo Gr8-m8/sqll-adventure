@@ -6,6 +6,11 @@ class Table:
     TABLEKEY = "template_id"
     SCHEMA = "template_id INTEGER NOT NULL PRIMARY KEY"
 
+    @classmethod
+    def INIT(self, db: ManagerDB):
+        """SETUP DATABASE TABLE"""
+        db.create_table(self.TABLE, self.SCHEMA)
+
     def __init__(self, table_id: str) -> None:
         self.table_id = table_id
 

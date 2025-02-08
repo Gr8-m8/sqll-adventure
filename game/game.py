@@ -260,4 +260,7 @@ def main():
             db = MariaDB(connection)
 
         if game.start and ManagerDB.STATUS:
+            User.INIT(db)
+            Character.INIT(db)
+            Location.INIT(db)
             main_game(game, db)
