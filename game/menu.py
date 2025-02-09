@@ -118,7 +118,7 @@ class Menu:
                 waitforkey = False
                 self.close()
 
-        self.setfeedback(key)
+        #self.setfeedback(key)
         if key == "UP":
             self.options_cursor = (self.options_cursor-1) % len(self.options)
 
