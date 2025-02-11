@@ -86,18 +86,21 @@ class Menu:
         """Console Output"""
         if usysf.CLEAR:
             usysf.clear()
-        print(self.title)
-        print(self.text)
+        drawstr = ""
+        drawstr += f"{self.title}\n"
+        drawstr += f"{self.text}\n"
         self.options[self.options_cursor].selected = True
         for item in self.options:
-            print(item)
+            drawstr += f"{item}\n"
         self.options[self.options_cursor].selected = False
 
         if self.options[self.options_cursor].actiondesc:
-            print(self.options[self.options_cursor].actiondesc)
+            drawstr += f"{self.options[self.options_cursor].actiondesc}\n"
 
         if self.feedback:
-            print(self.feedback)
+            drawstr += f"{self.feedback}\n"
+
+        print(drawstr)
 
     def action(self, blocking=True):
         """Activate Manu Item"""
