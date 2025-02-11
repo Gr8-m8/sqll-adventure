@@ -10,10 +10,10 @@ def clear(active=CLEAR):
         os.system('cls' if isWindows() else 'clear')
 
 
-def log(msg, logfile=SESSION, consolelog=True):
+def log(msg: str, code: str="", logfile=SESSION, consolelog=True):
     """print to log file"""
     with open(f"{logfile}.log", "a") as logfile:
-        fs = f"{msg}\n"
+        fs = f"{code}: {msg}\n"
         logfile.write(fs)
         if consolelog:
             print(fs)
