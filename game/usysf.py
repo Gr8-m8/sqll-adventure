@@ -1,13 +1,16 @@
 import os
+import datetime
 
 CLEAR = True
+SESSION = datetime.datetime.now().strftime('%Y-%m-%d@%H-%M-%S')
+
 def clear(active=CLEAR):
     """Clear Console"""
     if active:
         os.system('cls' if isWindows() else 'clear')
 
 
-def log(msg, logfile="", consolelog=True):
+def log(msg, logfile=SESSION, consolelog=True):
     """print to log file"""
     with open(f"{logfile}.log", "a") as logfile:
         fs = f"{msg}\n"
