@@ -21,7 +21,7 @@ class Game:
 
     def set_user(self, user_id: str, db: ManagerDB, menu: Menu) -> None:
         """assign game user"""
-        self.user = User.get(db, user_id)
+        self.user = User.get(User, db, user_id)
         menu.close()
 
     def set_character_create(self, db: ManagerDB, menu: Menu) -> None:
@@ -41,7 +41,7 @@ class Game:
 
     def set_character(self, character_id: str, user_id: str, db: ManagerDB, menu: Menu) -> None:
         """assign game character"""
-        self.character = Character.get(db, character_id, user_id)
+        self.character = Character.get(Character, db, character_id, user_id)
         menu.close()
 
     def set_location_create(self, db: ManagerDB, menu: Menu) -> None:
@@ -74,7 +74,7 @@ def main_game(game: Game, db: ManagerDB):
     """main game func"""
     users = [MenuOption(
         text="New User", action=lambda: game.set_user_create(db, usermenu))]
-    for user in User.list(db):
+    for user in User.list(User, db):
         users.append(MenuOption(
             text=user, action=lambda id=user.user_id: game.set_user(id, db, usermenu)))
 
@@ -86,7 +86,7 @@ def main_game(game: Game, db: ManagerDB):
         game.exit(db)
 
     characters = [MenuOption(text="New Character", action=lambda: game.set_character_create(db, charactermenu))]
-    for character in Character.list(db, user_id=game.user.user_id):
+    for character in Character.list(Character, db, user_id=game.user.user_id):
         characters.append(
             MenuOption(
                 text=character,
@@ -117,8 +117,8 @@ def main_game(game: Game, db: ManagerDB):
             locations.append(MenuOption(text=fs, action=lambda id=location.location_id: game.set_location(id, db, locationmenu)))
 
         character = game.character.display()
-        location = Location.get(db, game.character.location_id).display() if game.character.location_id else "None"
-        character_other = Character.list(db, location_id=game.character.location_id, character_id=game.character.character_id)
+        location = Location.get(Location, db, game.character.location_id).display() if game.character.location_id else "None"
+        character_other = Character.list(Character, db, location_id=game.character.location_id, character_id=game.character.character_id)
         character_other = '\n'.join(c.display() for c in character_other) if len(character_other)>0 else "Noone"
         text = f"Character: {character}\nAT {location}\n\nWITH\n{character_other}\n\nSelect Action"
         options = locations + \
