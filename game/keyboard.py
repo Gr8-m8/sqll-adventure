@@ -78,7 +78,8 @@ try:
         
     KEYBOARD = Keyboard_msvcrt()
 except Exception as e:
-    usysf.log(f"FAILED IMPORT WINDOWS KEYBOARD: {e}")
+    status = "UNEXPECTED" if usysf.isWindows() else "EXPECTED"
+    usysf.log(f"{status} FAILED IMPORT WINDOWS KEYBOARD: {e}")
 try:
     import getch
 
@@ -102,4 +103,5 @@ try:
     KEYBOARD = Keyboard_getch()
 
 except Exception as e:
-    usysf.log(f"FAILED IMPORT LINUX KEYBOARD: {e}")
+    status = "EXPECTED" if usysf.isWindows() else "UNEXPECTED"
+    usysf.log(f"{status} FAILED IMPORT LINUX KEYBOARD: {e}")
