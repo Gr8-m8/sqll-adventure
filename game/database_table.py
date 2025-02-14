@@ -231,7 +231,7 @@ class Path(Table):
     """link location table object"""
     TABLE = "paths"
     TABLEKEY = "path_id"
-    SCHEMA = f"{TABLEKEY} PRIMARY KEY NOT NULL, location_id INTEGER, destination_id INTEGER"
+    SCHEMA = f"{TABLEKEY} INTEGER NOT NULL PRIMARY KEY, location_id INTEGER, destination_id INTEGER"
 
     def __init__(self, path_id: str, location_id: str, destination_id: str):
         super().__init__(path_id)
@@ -271,7 +271,7 @@ class Item(Table):
     """item table object"""
     TABLE = "items"
     TABLEKEY = "item_id"
-    SCHEMA = f"{TABLEKEY} INTEGER PRIMARY KEY NOT NULL, noun VARCHAR(63), adjective VARCHAR(63), verb VARCHAR(63), equipment_slot VARCHAR(63), character_id INTEGER, in_use INTEGER"
+    SCHEMA = f"{TABLEKEY} INTEGER NOT NULL PRIMARY KEY, noun VARCHAR(63), adjective VARCHAR(63), verb VARCHAR(63), equipment_slot VARCHAR(63), character_id INTEGER, in_use INTEGER"
 
     def __init__(self, table_id: str, noun: str, adjective: str, verb: str, equipment_slot: str, character_id: str, in_use: str):
         super().__init__(table_id)
