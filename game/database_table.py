@@ -260,8 +260,6 @@ class Path(Table):
         
         if paths:
             for path in paths:
-
-                usysf.log(path, "PATH")
                 ret.append(Path(*path))
         return ret
     
@@ -318,6 +316,19 @@ class Item(Table):
         ]
         equpment_slot = random.choice(equipment_slots)
         return Item.create(db, character_id, noun, adjective, verb, equpment_slot)
+    
+    @staticmethod
+    def list(table: "Item", db: ManagerDB, character_id: str = None) -> list:
+        """item table entries"""
+        ret = []
+        where = {}
+        where.update({Character.TABLEKEY: character_id}) if character_id else None
+
+        items = db.select(Item.TABLE, ['*']) if not (character_id) else db.select(Item.TABLE, ['*'], where)
+        if (items):
+            for item in items:
+                ret.append(Item(*item))
+        return ret
 
     def trade(self, db: ManagerDB, character_id):
         """change item character"""
