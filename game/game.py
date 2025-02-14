@@ -1,9 +1,10 @@
 """db game"""
+import random
 import usysf
 from menu import Menu, MenuItem, MenuOption, MenuTitle
 from connection import ServerConnection
 from database import MariaDB, Sqllite3DB, ManagerDB, OFFLINE
-from database_table import User, Location, Character
+from database_table import User, Location, Character, Path, Item
 
 class Game:
     """local game"""
@@ -28,12 +29,15 @@ class Game:
         """create and assign game character"""
         name = input("Character Name\n> ")
         description = input("Character Description\n> ")
+        location_id = Location.get_random(db).location_id
         self.set_character(
             Character.create(
                 db,
                 name,
                 description,
-                self.user.user_id),
+                self.user.user_id,
+                location_id
+            ),
             self.user.user_id,
             db,
             menu
@@ -54,15 +58,44 @@ class Game:
         """assign game characer location"""
         self.character.move(db, location_id)
         self.character.location_id = location_id
-        menu.close()
         db.save()
+        menu.close()
+        
 
     def action_character(self, db: ManagerDB, menu: Menu, action: str):
         """set character action"""
         self.character.action_do(db, action)
         self.character.action = action
-        menu.close()
         db.save()
+        menu.close()
+        
+
+    def explore(self, db: ManagerDB, menu: Menu):
+        """Explore action"""
+        printstr = "You found "
+        events = [
+            "ITEM",
+            "LOCATION"
+        ]
+        event = random.choice(events)
+        if event == "ITEM":
+            printstr += "an item: "
+            item_id = Item.create_generate(db, self.character.character_id)
+            db.save()
+            printstr += Item.get(Item, db, item_id).display()
+            
+        if event == "LOCATION":
+            printstr += "a location: "
+            location_id = Location.create_generate(db)
+            db.save()
+            printstr += Location.get(Location, db, location_id).display()
+            path_id = Path.create(db, self.character.location_id, location_id)
+            self.character.move(db, location_id)
+            db.save()
+        
+        input(printstr)
+        
+        menu.close()
 
     def exit(self, db: ManagerDB) -> None:
         """Terminate Game"""
@@ -72,6 +105,15 @@ class Game:
 
 def main_game(game: Game, db: ManagerDB):
     """main game func"""
+    def inventory(game: Game, db: ManagerDB):
+        items = [MenuOption("Return", action=lambda: inventorymenu.close())]
+        for item in Item.list(Item, db, game.character.character_id):
+            items.append(MenuOption(item.display(), action=lambda it=item: it.use(db)))
+        inventorymenu = Menu(MenuTitle("Adventure Game"),
+                             MenuItem(f"Inventory of {game.character.name}"), items)
+        
+        Menu.display_menu(inventorymenu)
+
     users = [MenuOption(
         text="New User", action=lambda: game.set_user_create(db, usermenu))]
     for user in User.list(User, db):
@@ -110,11 +152,13 @@ def main_game(game: Game, db: ManagerDB):
         locations = [
             MenuOption(text="Reload", action=lambda: locationmenu.close()),
             MenuOption(text="Action", action=lambda: game.action_character(db, locationmenu, input("Action\n> "))),
-            MenuOption(text="New Location", action=lambda: game.set_location_create(db, locationmenu))
+            #MenuOption(text="New Location", action=lambda: game.set_location_create(db, locationmenu)),
+            MenuOption(text="Inventory", action=lambda: inventory(game, db)),
+            MenuOption(text="Explore", action=lambda: game.explore(db, locationmenu))
         ]
-        for location in Location.list(db):
-            fs = f"Go To: {location.display()}"
-            locations.append(MenuOption(text=fs, action=lambda id=location.location_id: game.set_location(id, db, locationmenu)))
+        for path in Path.list(db, game.character.location_id):
+            fs = f"Go To: {Location.get(Location, db, path.destination_id)}"
+            locations.append(MenuOption(text=fs, action=lambda id=path.destination_id: game.set_location(id, db, locationmenu)))
 
         character = game.character.display()
         location = Location.get(Location, db, game.character.location_id).display() if game.character.location_id else "None"
@@ -261,4 +305,6 @@ def main():
             User.INIT(db)
             Character.INIT(db)
             Location.INIT(db)
+            Path.INIT(db)
+            Item.INIT(db)
             main_game(game, db)
