@@ -1,5 +1,7 @@
 import usysf
 from database import ManagerDB
+from words import Words
+import random
 
 class Table:
     """Generic table object"""
@@ -16,7 +18,7 @@ class Table:
         self.table_id = table_id
 
     def __str__(self):
-        return f"{self.table_id}"
+        return f"{self.TABLE} {self.TABLEKEY}:{self.table_id}"
 
     @staticmethod
     def create(table: "Table", db: ManagerDB) -> str:
@@ -25,13 +27,24 @@ class Table:
         db.insert(table.TABLE, [f'{table_id}'])
         db.save()
         return str(table_id)
+    
+    def create_generate(table: "Table", db: ManagerDB) -> str:
+        return table.create(table, db)
 
     @staticmethod
     def get(table: "Table", db: ManagerDB, table_id: str) -> "Table":
-        """current game user"""
+        """table row"""
         attr = db.select(table.TABLE, ['*'], {table.TABLEKEY: table_id})[0]
-        usysf.log(attr)
+        #usysf.log(attr)
         return table(*attr)
+    
+    @staticmethod
+    def get_random(table: "Table", db: ManagerDB) -> "Table":
+        """random row"""
+        if Table.len(table, db) < 1:
+            Table.create_generate(table, db)
+        table_id = random.randint(1, Table.len(table, db))
+        return Table.get(table, db, table_id)
 
     @staticmethod
     def list(table: "Table", db: ManagerDB) -> list:
@@ -61,6 +74,7 @@ class User(Table):
     SCHEMA = "user_id INTEGER NOT NULL PRIMARY KEY, name varchar(255) NOT NULL, mail varchar(255) NOT NULL"
 
     def __init__(self, user_id: str, name: str, mail: str) -> None:
+        super().__init__(user_id)
         self.user_id: str = user_id
         self.name: str = name
         self.mail: str = mail
@@ -92,6 +106,7 @@ class Character(Table):
     SCHEMA = "character_id INTEGER NOT NULL PRIMARY KEY, name varchar(255) NOT NULL, description varchar(255), location_id varchar(255), user_id varchar(255), action varchar(1023)"
 
     def __init__(self, character_id: str, name: str, description: str, location_id: str, user_id: str, action: str) -> None:
+        super().__init__(character_id)
         self.character_id = character_id
         self.name = name
         self.description = description
@@ -150,7 +165,7 @@ class Character(Table):
         """change character action"""
         return db.update(
             Character.TABLE,
-            {"action": '"'+action+'"'},
+            {"action": f'"{action}"'},
             {Character.TABLEKEY: self.character_id}
         )
 
@@ -166,6 +181,7 @@ class Location(Table):
     SCHEMA = "location_id INTEGER NOT NULL PRIMARY KEY, name varchar(255) NOT NULL, description varchar(255)"
 
     def __init__(self, location_id: str, name: str, description: str) -> None:
+        super().__init__(location_id)
         self.location_id = location_id
         self.name = name
         self.description = description
@@ -180,6 +196,21 @@ class Location(Table):
         db.insert(Location.TABLE, [f'{location_id}', f'"{name}"', f'"{description}"'])
         db.save()
         return str(location_id)
+    
+    @staticmethod
+    def create_generate(db):
+        """new random location table row"""
+        name = Words.name_location()
+        description = ", ".join([Words.adjective(), Words.adjective(), Words.adjective()])
+        return Location.create(db, name, description)
+    
+    @staticmethod
+    def get_random(db: ManagerDB) -> "Table":
+        """random row"""
+        if Location.len(Location, db) < 1:
+            Location.create_generate(db)
+        table_id = random.randint(1, Location.len(Location, db))
+        return Table.get(Location, db, table_id)
 
     @staticmethod
     def list(db: ManagerDB, location_id_exclude: str = None) -> list:
@@ -195,3 +226,128 @@ class Location(Table):
     def display(self) -> str:
         """display str"""
         return f"{self.name} ({self.description})"
+    
+class Path(Table):
+    """link location table object"""
+    TABLE = "paths"
+    TABLEKEY = "path_id"
+    SCHEMA = f"{TABLEKEY} PRIMARY KEY NOT NULL, location_id INTEGER, destination_id INTEGER"
+
+    def __init__(self, path_id: str, location_id: str, destination_id: str):
+        super().__init__(path_id)
+        self.path_id = path_id
+        self.location_id = location_id
+        self.destination_id = destination_id
+
+    @staticmethod
+    def create(db: ManagerDB, location_id: str, destination_id: str) -> str:
+        """new location table row"""
+        path_id = Path.len(Path, db)+1
+        db.insert(Path.TABLE, [f'{path_id}', f'{location_id}', f'{destination_id}'])
+        db.save()
+        return str(location_id)
+    
+    @staticmethod
+    def list(db: ManagerDB, location_id: str = None) -> list:
+        """location table entries"""
+        ret = []
+        if location_id:
+            locations = db.select(Path.TABLE, [f'{Path.TABLEKEY}', 'location_id', 'destination_id'], {'location_id': location_id})
+            destinations = db.select(Path.TABLE, [f'{Path.TABLEKEY}', 'destination_id', 'location_id'], {'destination_id': location_id})
+            paths = locations+destinations
+        else:
+            paths = db.select(Path.TABLE, ['*'])
+        
+        if paths:
+            for path in paths:
+
+                usysf.log(path, "PATH")
+                ret.append(Path(*path))
+        return ret
+    
+    def display(self) -> str:
+        """display str"""
+        return f"{self.location_id} <-> {self.destination_id}"
+
+class Item(Table):
+    """item table object"""
+    TABLE = "items"
+    TABLEKEY = "item_id"
+    SCHEMA = f"{TABLEKEY} INTEGER PRIMARY KEY NOT NULL, noun VARCHAR(63), adjective VARCHAR(63), verb VARCHAR(63), equipment_slot VARCHAR(63), character_id INTEGER, in_use INTEGER"
+
+    def __init__(self, table_id: str, noun: str, adjective: str, verb: str, equipment_slot: str, character_id: str, in_use: str):
+        super().__init__(table_id)
+        self.item_id = table_id
+        self.noun = noun
+        self.adjective = adjective
+        self.verb = verb
+        self.equipment_slot = equipment_slot
+        self.character_id = character_id
+        self.in_use = in_use
+
+    @staticmethod
+    def create(db: ManagerDB, character_id: str, noun:str, adjective:str, verb:str, equpment_slot:str) -> str:
+        """new item table row"""
+        item_id = Item.len(Item, db)+1
+        db.insert(Item.TABLE, [f'{item_id}', f'"{noun}"', f'"{adjective}"', f'"{verb}"', f'"{equpment_slot}"', f'{character_id}', f'0'])
+        db.save()
+        return str(item_id)
+    
+    @staticmethod
+    def create_generate(db, character_id):
+        """new random item row"""
+        noun = Words.noun()
+        adjective = Words.adjective()
+        verb = Words.verb()
+        equipment_slots = [
+            "",
+            "Hat",
+            "Helmet",
+            "Glasses",
+            "Mask",
+            "Shirt",
+            "Chestplate",
+            "Gloves",
+            "Gauntlet",
+            "Trousers",
+            "Leggings",
+            "Socks",
+            "Shoes",
+            "Weapon",
+            "Shield"
+        ]
+        equpment_slot = random.choice(equipment_slots)
+        return Item.create(db, character_id, noun, adjective, verb, equpment_slot)
+
+    def trade(self, db: ManagerDB, character_id):
+        """change item character"""
+        self.character_id = character_id
+        self.in_use = "False"
+        return db.update(
+            Item.TABLE, 
+            {"in_use": f'"{self.in_use}"', Character.TABLEKEY: self.character_id},
+            {Item.TABLEKEY: self.item_id}
+        )
+
+    def use(self, db: ManagerDB):
+        """use item"""
+        #unequip other
+        self.in_use = '0'
+        db.update(Item.TABLE, 
+            {"in_use": f'"{self.in_use}"'},
+            {Character.TABLEKEY: self.character_id, "equipment_slot": f"{self.equipment_slot}"}
+        )
+        #equip this
+        self.in_use = '1'
+        db.update(Item.TABLE, 
+            {"in_use": f'"{self.in_use}"'},
+            {Item.TABLEKEY: self.item_id}
+        )
+
+    def delete(self, db: ManagerDB):
+        """remove item"""
+        db.delete(Item.TABLE, {Item.TABLEKEY: self.item_id})
+
+    def display(self) -> str:
+        """display str"""
+        return f"{self.verb} {self.adjective} {self.noun}-{self.equipment_slot} ({"EQUIPPED" if self.in_use == '1' else "STORED"})"
