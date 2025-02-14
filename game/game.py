@@ -157,7 +157,7 @@ def main_game(game: Game, db: ManagerDB):
             MenuOption(text="Explore", action=lambda: game.explore(db, locationmenu))
         ]
         for path in Path.list(db, game.character.location_id):
-            fs = f"Go To: {Location.get(Location, db, path.destination_id)}"
+            fs = f"Go To: {Location.get(Location, db, path.destination_id).display()}"
             locations.append(MenuOption(text=fs, action=lambda id=path.destination_id: game.set_location(id, db, locationmenu)))
 
         character = game.character.display()

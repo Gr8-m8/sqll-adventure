@@ -361,4 +361,4 @@ class Item(Table):
 
     def display(self) -> str:
         """display str"""
-        return f"{self.verb} {self.adjective} {self.noun}-{self.equipment_slot} ({"EQUIPPED" if self.in_use == '1' else "STORED"})"
+        return f"{self.verb}ing {self.adjective} {self.noun}-{self.equipment_slot} ({"EQUIPPED" if self.in_use == '1' else "STORED"})"
