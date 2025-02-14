@@ -1,6 +1,7 @@
 """import"""
 import os
 import time
+import traceback
 
 from textdecoration import textdecoration as textd
 
@@ -145,6 +146,7 @@ class Menu:
                 self.options[self.options_cursor].action()
             except Exception as e:
                 usysf.log(f"MENUOPTION ACTIVATE ERROR: {e}")
+                #usysf.log(f"^{traceback.format_exc()}")
 
         if key == "CLOSE":
             self.close()
